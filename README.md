@@ -1,451 +1,430 @@
-# ForYou Social Ecosystem Specification
+# ForYou Social Network Specification
 
 **Domain:** [foryousocial.network](https://foryousocial.network)  
 *The digital home for a personalized, decentralized experience.*
 
 ---
 
-## 1. Core Overview
+## 1. Executive Summary
 
-### 1.1. ForYou Network (The Protocol)
-- **Description:**  
-  The ForYou Network is the decentralized social protocol where users share, index, and interact with content. Rather than hosting files, it indexes links that point to externally hosted content.
-- **Key Principles:**  
-  - **Public Domain Content:** Every message is permanently recorded and released under a public domain license.  
-  - **Micropayment-Driven Interaction:** On‑chain micropayments (via Bitcoin and Ethereum only) are required for submissions and archival retrievals, deterring spam and funding network operations.
-  - **Decentralized and Resilient:** Payment batching, dynamic fee adjustment, sharding, advanced caching, and automated failover ensure high availability and scalability.
-  - **No On‑Chain File Storage:** The network stores only links. Content files remain hosted externally, so the internet is not reinvented—just indexed and shared.
+The **ForYou Social Network** is a decentralized social ecosystem built on a modern void‑casting model. Users post content into a global “void” where sophisticated AI crawls and surfaces relevant posts much like a personalized public timeline. Every piece of content is released under a public domain license.
 
-### 1.2. ForYou Federation (Governance & Consortium)
-- **Role:**  
-  The ForYou Federation is the community‑driven governing body responsible for protocol upgrades, fee adjustments, legal compliance, and overall strategic direction.
-- **Governance Principles:**  
-  - **Transparent, Democratic Process:** Decisions are made via on‑chain/hybrid voting systems and community discussion.
-  - **Open Membership:** Developers, node operators, researchers, and community stakeholders actively participate.
-- **Tagline:** "United in vision, governed by community."
+Key highlights include:
 
-### 1.3. ForYou Heritage (Archival Foundation)
-- **Role:**  
-  The ForYou Heritage is charged with the long‑term preservation and access to historical link data.
-- **Operational Model:**  
-  Managed and funded by the Federation, it uses archival retrieval fees to ensure the legacy of the network’s data endures.
-- **Tagline:** "Preserving your legacy, one moment at a time."
+- **Micropayment-Driven Operations:**  
+  Posting, archival retrieval, and ad submissions are processed via on‑chain micropayments (Bitcoin and Ethereum only). Notably, users pay a fee to retrieve archived posts—a mechanism that helps fund and sustain Heritage servers.
+
+- **Decentralized Architecture:**  
+  The network uses IPFS‑style addressing, sharding, and multi‑layer caching to optimize content propagation without centralized control. Actual file hosting remains off‑chain.
+
+- **Community Governance:**  
+  The **ForYou Federation** manages protocol upgrades, fee policies, and legal compliance via transparent, democratic processes.
+
+- **Ad Messages with Higher Fees:**  
+  Advertisement messages incorporate additional metadata (exceeding standard size limits) and therefore incur higher fees. These fees help drive network momentum and fund operations while ensuring the platform remains independent of advertiser control.
+
+- **Scalability & Reliability:**  
+  Techniques such as dynamic fee adjustments, automated failover, and regional optimization ensure that the network remains resilient and high‑performance.
 
 ---
 
-## 2. Message Types and Schemas
+## 2. Core Architecture
 
-Every message is a JSON object that is digitally signed and includes on‑chain payment data (Bitcoin or Ethereum) for verification. The primary message types are:
+### 2.1. Void‑Casting Content Flow
+- **Decentralized Posting:**  
+  Users publish posts into a global digital “void” without a central authority.
+- **AI‑Driven Discovery:**  
+  AI agents continuously scan the void to surface personalized content for users.
+- **Democratic Visibility:**  
+  Content discovery is based on algorithmic relevance rather than centralized curation.
 
-### 2.1. Regular Post / Reply Message
-A standard content message using Markdown formatting and external links.
+### 2.2. Technical Foundation
+- **Content Addressing:**  
+  All posts are assigned unique hash‑based identifiers (similar to IPFS URIs) for deduplication and verification.
+- **Sharding & Caching:**  
+  Data is sharded and cached at multiple levels to reduce latency and ensure fast propagation across regions.
+- **No On‑Chain File Storage:**  
+  The network only indexes references and metadata; large files remain off‑chain.
+
+---
+
+## 3. Key Entities
+
+### 3.1. ForYou Network (Protocol Layer)
+- **Purpose:**  
+  Facilitates decentralized content posting, indexing, and AI‑based discovery.
+- **Mechanisms:**  
+  Uses BTC/ETH micropayments for posting, metadata validation, and content integrity.
+
+### 3.2. ForYou Federation (Governance Layer)
+- **Role:**  
+  A community‑driven body overseeing protocol upgrades, fee adjustments, and compliance.
+- **Principles:**  
+  Decisions are made transparently via on‑chain or hybrid off‑chain voting, with open membership to developers, node operators, and community stakeholders.
+
+### 3.3. ForYou Heritage (Archival & Preservation Layer)
+- **Role:**  
+  Responsible for the long‑term archival of post references and metadata.
+- **Retrieval Fee Model:**  
+  Users who wish to access archived posts pay a micropayment fee. These funds directly support the operation and maintenance of Heritage servers, ensuring historical content remains accessible.
+
+---
+
+## 4. Node Architecture and Roles
+
+The network relies on specialized nodes, each serving a distinct purpose:
+
+### 4.1. Heritage Nodes (Archival Nodes)
+- **Responsibilities:**  
+  - Securely store and preserve historical content references.  
+  - Manage retrieval fee collection and ensure data integrity over time.
+
+### 4.2. Flow Nodes (Relay Nodes)
+- **Responsibilities:**  
+  - Rapidly propagate new posts and content updates across the network.  
+  - Maintain regional caches to ensure efficient content delivery.
+
+### 4.3. ForYou Bridge (Cross‑Chain Payment Nodes)
+- **Responsibilities:**  
+  - Validate BTC/ETH micropayment transactions referenced in messages.  
+  - Batch payments and standardize payment data for use across the ecosystem.
+
+---
+
+## 5. Message Schema Specifications
+
+Every network message is a JSON object that includes metadata, optional content, and a digital signature referencing a valid on‑chain transaction.
+
+### 5.1. Base Message Structure
 
 ```json
 {
   "id": "unique-message-id",
   "author": "user-public-key-or-alias",
   "timestamp": "2025-02-09T12:00:00Z",
-  "type": "post",
-  "content": "This is a **Markdown** formatted post with a [link](https://example.com).",
-  "links": [
-    "https://example.com/resource"
-  ],
-  "metadata": {
-    "keywords": ["news", "update", "community"],
-    "lang": "en",
-    "thread": "optional-thread-id",
-    "version": 1
-  },
-  "content_address": "ipfs://QmExampleHash", 
+  "type": "post|ad|alias_registration|poll|other",
+  "version": 1,
   "payment": {
-    "chain": "bitcoin",
-    "txid": "bitcoin-txid-example",
-    "block": 678901,
-    "amount": "satoshi-amount",
+    "chain": "bitcoin|ethereum",
+    "txid": "blockchain-transaction-id",
+    "block": "integer-block-number",
+    "amount": "payment-amount",
     "timestamp": "2025-02-09T11:59:55Z"
   },
   "signature": "digital-signature"
 }
 ```
 
-### 2.2. Advertisement Message
-A post containing ad content with clear campaign data and referral tracking for monitoring performance and flagging fraudulent behavior.
+- **id:** Unique identifier (e.g., UUID or hash).  
+- **author:** User’s public key or registered alias.  
+- **timestamp:** UTC ISO‑8601 date/time string.  
+- **type:** Message category (e.g., `post`, `ad`, `alias_registration`, `poll`).  
+- **version:** Schema version for compatibility.  
+- **payment:** References a valid BTC or ETH transaction.  
+- **signature:** Digital signature from the author’s private key.
 
+### 5.2. Content Types
+
+#### 5.2.1. Standard Post
 ```json
 {
-  "id": "unique-ad-message-id",
-  "author": "advertiser-public-key-or-alias",
-  "timestamp": "2025-02-09T12:00:00Z",
-  "type": "ad",
-  "content": "This is a **Markdown** formatted advertisement. Check out our offer!",
-  "links": [
-    {
-      "base": "https://example.com/offer",
-      "refParam": "clientId"
-    }
-  ],
+  "content": "Markdown-formatted content...",
+  "links": ["https://example.com/resource"],
   "metadata": {
-    "keywords": ["promo", "sponsored", "sale", "discount", "tech", "innovation"],
+    "keywords": ["example", "post"],
     "lang": "en",
+    "thread": "optional-thread-id"
+  },
+  "content_address": "ipfs://QmExampleHash"
+}
+```
+- **content:** Main text in Markdown format.  
+- **links:** External resource URLs.  
+- **metadata:** Includes keywords, language, and optional thread information.  
+- **content_address:** Hash‑based pointer (e.g., IPFS URI).
+
+#### 5.2.2. Advertisement Message
+```json
+{
+  "content": "Markdown-formatted advertisement content...",
+  "links": [{
+    "base": "https://example.com/offer",
+    "refParam": "clientId"
+  }],
+  "metadata": {
     "campaign": {
-      "name": "Spring Tech Sale",
-      "description": "Exclusive offers on the latest tech gadgets. Discover deals tailored for you.",
+      "name": "Campaign Name",
+      "description": "Detailed campaign description",
       "targeting": {
         "regions": ["US", "EU"],
         "age_range": "18-35",
-        "interests": ["tech", "gaming", "gadgets"]
+        "interests": ["tech", "gaming"]
       },
-      "payoutRates": {
-        "click": 0.01
-      },
+      "payoutRates": {"click": 0.01},
       "duration": "2025-02-01T00:00:00Z/2025-03-01T00:00:00Z"
     },
-    "version": 1
+    "keywords": ["promo", "ad"],
+    "lang": "en"
   },
-  "content_address": "ipfs://QmExampleAdHash",
-  "payment": {
-    "chain": "ethereum",
-    "txid": "ethereum-txid-example",
-    "block": 12345678,
-    "amount": "wei-amount",
-    "timestamp": "2025-02-09T11:59:55Z"
-  },
-  "signature": "digital-signature"
+  "content_address": "ipfs://QmExampleAdHash"
 }
 ```
+- **Note:** Ad messages store additional metadata (exceeding the size limits imposed on regular or structured posts) and therefore incur higher fees. This premium fee structure drives momentum and helps fund the network while ensuring that the platform remains independent of advertiser influence.
 
-### 2.3. Alias Registration Message
-A message for user profile creation and alias registration.
-
+#### 5.2.3. Alias Registration
 ```json
 {
-  "id": "unique-alias-registration-id",
-  "author": "user-public-key",
-  "timestamp": "2025-02-09T13:00:00Z",
-  "type": "alias_registration",
   "alias": "desired_username",
   "profile": {
     "display_name": "User Display Name",
-    "bio": "A short bio in **Markdown**.",
+    "bio": "A short bio in Markdown.",
     "avatar": "https://example.com/avatar.jpg",
-    "links": [
-      "https://example.com",
-      "https://blog.example.com"
-    ]
-  },
-  "payment": {
-    "chain": "ethereum",
-    "txid": "ethereum-txid-example",
-    "block": 12345678,
-    "amount": "wei-amount",
-    "timestamp": "2025-02-09T12:59:55Z"
-  },
-  "signature": "digital-signature"
-}
-```
-
-### 2.4. Structured Message Types (Polls, Events, etc.)
-Example of a poll message with interactive options.
-
-```json
-{
-  "id": "unique-poll-id",
-  "author": "user-public-key-or-alias",
-  "timestamp": "2025-02-09T14:00:00Z",
-  "type": "poll",
-  "content": "Which feature should we implement next?",
-  "options": [
-    "Feature A",
-    "Feature B",
-    "Feature C"
-  ],
-  "metadata": {
-    "keywords": ["poll", "feedback", "community"],
-    "lang": "en",
-    "duration": "3600",
-    "version": 1
-  },
-  "payment": {
-    "chain": "bitcoin",
-    "txid": "bitcoin-txid-poll",
-    "block": 679000,
-    "amount": "satoshi-amount",
-    "timestamp": "2025-02-09T13:59:55Z"
-  },
-  "signature": "digital-signature"
-}
-```
-
----
-
-## 3. Payment, Fee Mechanisms, and Incentives
-
-### 3.1. Payment Verification and Batching
-- **On‑Chain Verification:**  
-  Nodes verify transactions on Bitcoin and Ethereum using transaction IDs (`txid`) and the required confirmations.
-- **Probabilistic Verification:**  
-  For low‑value transactions, probabilistic methods may be applied to reduce verification overhead.
-- **Payment Batching:**  
-  Multiple payment verifications are grouped together for efficiency.
-- **Circuit Breakers:**  
-  Automated fee adjustments occur during blockchain congestion to maintain smooth operations.
-
-### 3.2. Dynamic Fee Adjustment and Retrieval Costs
-- **Dynamic Fees:**  
-  Posting fees are dynamically adjusted based on current network usage, resource demand, and blockchain conditions. Staked participants may receive discount factors.
-- **Retrieval Fees:**  
-  Accessing archived link data (managed by ForYou Heritage) incurs a micropayment fee that supports the archival service.
-- **Conceptual Fee Formula:**
-
-  \[
-  \text{Fee} = \text{BaseFee} \times \left(1 + \alpha \frac{U}{U_{\text{avg}}}\right) \times \left(1 + \beta \frac{C}{C_{\text{avg}}}\right) \times D
-  \]
-  
-  - \(U\) = current usage; \(U_{\text{avg}}\) = average usage  
-  - \(C\) = current cost; \(C_{\text{avg}}\) = average cost  
-  - \(\alpha, \beta\) = configurable coefficients  
-  - \(D\) = discount factor for staked participants
-
-### 3.3. Incentives and Anti‑Gaming Measures
-- **Flat Incentive Model:**  
-  All node operators share fees on an equal basis.
-- **Performance-Based Rewards:**  
-  Bonuses are awarded for high uptime, bandwidth, and responsiveness.
-- **Specialized Node Roles & Marketplace:**  
-  Nodes with specialized functions (detailed in Section 5) receive targeted incentives. A potential marketplace may be developed for premium services.
-- **Referral Fraud Detection:**  
-  The system monitors ad performance and automatically flags ads exhibiting fraudulent or abusive behavior.
-- **Minimum Retention Requirements:**  
-  Nodes must store link data for a predefined minimum period to preserve historical records.
-- **Time‑Locked Staking (Optional):**  
-  Participants may stake tokens (on Bitcoin or Ethereum) for fixed durations to earn increased rewards.
-
----
-
-## 4. Content Storage, Propagation, and Archiving
-
-### 4.1. Decentralized Data Propagation
-- **Link Indexing & Deduplication:**  
-  The network indexes and deduplicates links using content addressing (e.g., IPFS‑style URIs) while leaving file hosting to external providers.
-- **Sharding & Caching:**  
-  Data is sharded across nodes with multiple caching layers to ensure low latency.
-- **Regional Optimization:**  
-  Message propagation is optimized by geographic region.
-- **Batched Propagation:**  
-  Messages are batched for efficient transmission.
-
-### 4.2. Archival of Link Data
-- **Archival Policies:**  
-  Link data is archived based on timestamps and retained for a minimum period before transitioning to long‑term storage.
-- **ForYou Heritage:**  
-  Managed by ForYou Heritage, the archival service preserves link data long term. Retrieval fees support the Foundation’s operational costs.
-- **Delta Compression & Progressive Loading:**  
-  Content updates are delta‑compressed and progressively loaded to improve efficiency.
-
-### 4.3. Discoverability and Metadata
-- **AI‑Driven Metadata Generation:**  
-  Nodes generate detailed metadata for each message to improve searchability, categorization, and ranking.
-- **Standardized Taxonomy:**  
-  A common taxonomy is used across the network for content categorization.
-- **User‑Defined Filtering:**  
-  All content filtering is performed at the user level with local algorithms or AI. No centralized reputation or moderation is imposed.
-
----
-
-## 5. Node Architecture, Health, and Specialization
-
-### 5.1. Node Roles and Branding
-Each node role is branded as part of the ForYou ecosystem:
-
-- **Heritage Nodes (Storage Nodes):**  
-  *Role:* Secure storage and archival of link data.  
-  *Description:* These nodes ensure historical integrity and long‑term accessibility.
-  
-- **Flow Nodes (Relay Nodes):**  
-  *Role:* Fast, efficient content relay across the network.  
-  *Description:* They propagate posts and updates quickly, maintaining a smooth content flow.
-  
-- **ForYou Bridge (Bridge Nodes):**  
-  *Role:* Cross‑chain connectivity with Bitcoin and Ethereum.  
-  *Description:* These specialized nodes serve as connectors between the blockchain networks and the ForYou ecosystem.
-
-### 5.2. Node Health Monitoring
-Nodes continuously report their status using an expanded JSON schema:
-
-```json
-{
-  "health_metrics": {
-    "uptime": "float (percentage of time online)",
-    "response_time": "ms (average response time)",
-    "storage_availability": "bytes (available storage for indexing links)",
-    "bandwidth_capacity": "mbps (network throughput)",
-    "geographic_location": "region (reported location)",
-    "peer_connections": "int (number of active connections)",
-    "cpu_usage": "percentage (current CPU load)",
-    "memory_usage": "bytes (current RAM usage)",
-    "error_rate": "errors/hour (frequency of errors)",
-    "latency_variance": "ms (variance in response time)"
-  },
-  "predictive_maintenance": {
-    "temperature": "°C (operating temperature)",
-    "fan_speed": "rpm (if applicable)",
-    "hardware_degradation_index": "score (based on historical performance)",
-    "predicted_failure": "timestamp or false (estimated potential failure time)"
-  },
-  "automated_recovery": {
-    "restart_attempts": "int (number of automated restarts)",
-    "last_recovery": "timestamp (time of last recovery)",
-    "auto_failover": "boolean (if automated failover is active)"
+    "links": ["https://example.com", "https://blog.example.com"]
   }
 }
 ```
+- **alias:** Desired username.  
+- **profile:** User’s metadata including display name, bio, avatar, and external links.
 
-- **Predictive Maintenance:**  
-  Nodes use real‑time and historical data (e.g., temperature trends, error rates) to forecast potential issues.
-- **Automated Recovery Procedures:**  
-  When critical issues are detected, nodes attempt self‑recovery (e.g., service restart, connection re‑establishment) and trigger auto‑failover to healthy peers if necessary.
+#### 5.2.4. Poll Message
+```json
+{
+  "content": "Which feature should we implement next?",
+  "options": ["Feature A", "Feature B", "Feature C"],
+  "metadata": {
+    "lang": "en",
+    "duration": "3600"
+  }
+}
+```
+- **options:** List of poll choices.  
+- **metadata.duration:** Duration (in seconds) for which the poll remains active.
 
-### 5.3. Partition and Censorship Resistance
+---
+
+## 6. Payment, Fees, and Economic Model
+
+### 6.1. Supported Cryptocurrencies
+- **Bitcoin (BTC) and Ethereum (ETH)** are used exclusively for all micropayment transactions.
+
+### 6.2. Dynamic Fee Structure
+Fees are calculated dynamically using the formula:
+
+\[
+\text{Fee} = \text{BaseFee} \times \left(1 + \alpha \frac{U}{U_{\text{avg}}}\right) \times \left(1 + \beta \frac{C}{C_{\text{avg}}}\right) \times D
+\]
+
+- \(U\) = current usage; \(U_{\text{avg}}\) = average usage  
+- \(C\) = current cost (e.g., average network fee); \(C_{\text{avg}}\) = average cost  
+- \(\alpha, \beta\) = configurable coefficients  
+- \(D\) = discount factor for staked participants
+
+### 6.3. Archival Retrieval Fees
+- **Retrieval Fees:**  
+  Users who access archived posts (managed by Heritage Nodes) must pay a retrieval fee. These fees directly fund the operation and maintenance of Heritage servers, ensuring long‑term content preservation.
+
+### 6.4. Payment Verification & Batching
+- **On‑Chain Verification:**  
+  ForYou Bridge nodes validate BTC/ETH transactions to ensure they meet confirmation requirements.
+- **Batching:**  
+  Micro‑transactions may be grouped to reduce verification overhead.
+
+### 6.5. Incentive Mechanisms
+- **Node Rewards:**  
+  Heritage and Flow nodes receive a share of collected fees, with performance‑based bonuses for uptime and responsiveness.
+- **Staking Benefits:**  
+  Optional time‑locked staking can provide fee discounts and enhanced voting weight within the governance process.
+
+---
+
+## 7. Content Storage, Propagation, and Archiving
+
+### 7.1. Decentralized Data Propagation
+- **Indexing & Deduplication:**  
+  Content links are indexed and deduplicated based on their hash.
+- **Sharding & Regional Caching:**  
+  Data is distributed and cached regionally to ensure low‑latency access.
+- **Batched Transmission:**  
+  Updates are batched to optimize network efficiency.
+
+### 7.2. Long‑Term Archiving (ForYou Heritage)
+- **Archival Policies:**  
+  Historical post references and metadata are stored for a minimum period.
+- **Retrieval Fee Model:**  
+  Users pay a retrieval fee to access archived posts. This fee helps fund the infrastructure of Heritage Nodes, ensuring that the network’s history is preserved reliably.
+
+### 7.3. AI‑Enhanced Metadata
+- **Automated Enrichment:**  
+  AI agents generate metadata (keywords, summaries, etc.) to improve content discoverability.
+- **User‑Level Filtering:**  
+  Clients can apply custom filters without any centralized censorship.
+
+---
+
+## 8. Security and Compliance
+
+### 8.1. Content and Transaction Security
+- **Digital Signatures:**  
+  Every message is signed to verify authorship.
+- **Transaction Validation:**  
+  Payments are verified on‑chain to ensure authenticity.
+- **Distributed Verification:**  
+  Multiple nodes cross‑check data integrity to prevent tampering.
+
+### 8.2. Network Integrity
+- **Node Authentication:**  
+  Secure, authenticated peer connections are maintained across the network.
+- **Sybil Attack Resistance:**  
+  Economic incentives and proof‑of‑storage measures help deter malicious nodes.
+
+### 8.3. Legal Compliance
+- **Jurisdiction‑Specific Filtering:**  
+  Node operators filter content that is illegal in their region while maintaining overall network decentralization.
+- **No Central “Kill Switch”:**  
+  The protocol itself remains free from centralized control.
+
+---
+
+## 9. Governance and Dispute Resolution
+
+### 9.1. ForYou Federation
+- **Oversight Role:**  
+  Manages protocol upgrades, fee policies, and node certification.
+- **Community Involvement:**  
+  Decisions are made through transparent, democratic voting processes (on‑chain or hybrid off‑chain).
+
+### 9.2. Governance Platforms
+- **ForYou Council:**  
+  A digital module where stakeholders submit proposals and vote on changes.
+- **ForYou Summit:**  
+  Periodic gatherings (virtual or in‑person) to discuss strategy and long‑term planning.
+
+### 9.3. Dispute Resolution
+- **Community Mediation:**  
+  Minor issues (such as alias conflicts) are resolved quickly through community discussions.
+- **Federation Arbitration:**  
+  Larger disputes are arbitrated by the Federation following a transparent voting process.
+
+---
+
+## 10. Client & Interaction Platforms
+
+### 10.1. ForYou Page
+- **Personalized Timeline:**  
+  Displays user‑specific posts and updates curated by AI.
+- **Threaded Conversations:**  
+  Posts can be organized into discussion threads for clarity.
+
+### 10.2. ForYou Pulse
+- **Real‑Time Updates:**  
+  Provides a live feed of trending topics and community activity.
+- **AI‑Driven Discovery:**  
+  Uses the same AI technology as ForYou Page to deliver timely content.
+
+### 10.3. ForYou App
+- **Multi‑Platform Experience:**  
+  The official client available on web, mobile, and desktop integrates ForYou Page and ForYou Pulse.
+- **Unified Interface:**  
+  Offers a seamless user experience with consistent content discovery and interaction.
+
+---
+
+## 11. Implementation Guidelines and Node Health
+
+### 11.1. Node Hardware Requirements
+- **Minimum Specifications:**  
+  - **CPU:** 4+ cores  
+  - **Memory:** 16GB+ RAM  
+  - **Storage:** 1TB+ SSD  
+  - **Network:** 100Mbps+  
+  - **Uptime Target:** 99.9%
+
+### 11.2. Health Monitoring Schema
+```json
+{
+  "health_metrics": {
+    "uptime": "float",
+    "response_time": "milliseconds",
+    "storage_availability": "bytes",
+    "bandwidth_capacity": "mbps",
+    "peer_connections": "integer",
+    "cpu_usage": "percentage",
+    "memory_usage": "bytes",
+    "error_rate": "errors/hour"
+  },
+  "predictive_maintenance": {
+    "temperature": "°C",
+    "fan_speed": "rpm",
+    "hardware_degradation_index": "float",
+    "predicted_failure": "timestamp or false"
+  },
+  "automated_recovery": {
+    "restart_attempts": "int",
+    "last_recovery": "timestamp",
+    "auto_failover": "boolean"
+  }
+}
+```
+- **Self‑Diagnostics:**  
+  Nodes perform continuous self‑monitoring to predict and recover from potential failures.
+
+### 11.3. Partition & Censorship Resistance
 - **Robust Peer Discovery:**  
-  Nodes use multiple bootstrapping methods (DNS seeds, DHT, and—where legally permissible—offline cache sharing) to discover peers.
-- **Automated Failover:**  
-  Traffic is automatically rerouted to healthy peers in case of node failure.
-- **Localized Offline Cache Sharing:**  
-  Offline cache sharing is implemented only in regions where it complies with local law.
+  Multiple bootstrapping methods (DNS seeds, DHT, offline caching where legal) are used.
+- **Local Compliance:**  
+  Nodes filter content as required by local law while ensuring overall network resilience.
 
 ---
 
-## 6. Content Filtering, Moderation, and Legal Compliance
+## 12. Monetization and Incentives
 
-- **Local User‑Level Filtering:**  
-  All content filtering and moderation is performed at the user level using personal algorithms or AI. No centralized reputation or flagging system is employed.
-- **Legal Compliance:**  
-  Nodes are responsible for filtering or pruning content that is illegal in their local jurisdiction in accordance with applicable laws.
-- **No Centralized Moderation:**  
-  The system avoids centralized reputation scores or flagging mechanisms, preserving decentralization.
+### 12.1. ForYou Ads (Advertising Platform)
+- **Ad Model:**  
+  Advertisement messages are submitted as posts with extended metadata and incur higher fees.
+- **Network Funding:**  
+  The premium fees collected from ad messages drive momentum and help fund network infrastructure without being beholden to advertisers.
 
----
-
-## 7. Governance, Upgrades, and Dispute Resolution
-
-### 7.1. ForYou Council (Governance Platform)
-- **Role:**  
-  Provides a digital platform for community decision‑making, proposal submissions, and voting on protocol upgrades.
-- **Mechanism:**  
-  Uses an on‑chain or hybrid off‑chain voting system that enables transparent and democratic participation.
-- **Incentives:**  
-  Active participants may receive rewards (e.g., bonus tokens, fee discounts).
-
-### 7.2. ForYou Summit (High‑Level Forum)
-- **Role:**  
-  A strategic forum for community leaders, developers, and stakeholders to discuss, plan, and innovate.
-- **Format:**  
-  Periodic virtual or physical gatherings to set long‑term strategic directions.
-- **Tagline:** "Where visionaries converge."
-
-### 7.3. ForYou Federation (Consortium Governance)
-- **Role:**  
-  Oversees seed nodes, protocol upgrades, fee adjustments, legal compliance, and community funding.
-- **Transparency:**  
-  All decisions, meetings, proposals, and actions are publicly documented to ensure openness and accountability.
+### 12.2. ForYou Micro (Micropayment Engine)
+- **Purpose:**  
+  Handles all on‑chain micropayments for posting, archival retrieval, and staking.
+- **Features:**  
+  - On‑chain verification using BTC/ETH.  
+  - Dynamic fee adjustments during blockchain congestion.  
+  - Fee discounts for staked participants.
 
 ---
 
-## 8. Client & Interaction Platforms
+## 13. Future Development
 
-### 8.1. ForYou Page (Client Interface)
-- **Role:**  
-  The personalized homepage or timeline for each user.
-- **Description:**  
-  A user-friendly interface where individuals view personal updates and curated community content.
-- **Tagline:** "Where your story unfolds."
-
-### 8.2. ForYou Pulse (Real‑Time Updates)
-- **Role:**  
-  A dynamic, real‑time feed delivering notifications and trending content.
-- **Description:**  
-  Keeps users up to date with the latest community activities and live events.
-- **Tagline:** "Feel the beat of the community."
-
-### 8.3. ForYou Flow (Content Aggregation Engine)
-- **Role:**  
-  A dynamic engine that aggregates content based on user interests.
-- **Description:**  
-  Provides a continuous, personalized stream of content.
-- **Tagline:** "Streamlined. Dynamic. Yours."
-
-### 8.4. ForYou App (Client Application)
-- **Role:**  
-  The official mobile and desktop application granting full access to the ForYou ecosystem.
-- **Description:**  
-  Integrates all ForYou platforms—from personalized pages to live updates—into one seamless user experience.
+### 13.1. Scalability & Optimization
+- **Enhanced AI Algorithms:**  
+  Further improvements to content relevance and personalization.
+- **Cross‑Chain Expansion:**  
+  Ongoing research to potentially support additional blockchains while keeping BTC/ETH as the primary payment channels.
+- **Performance Optimization:**  
+  Continued refinement of sharding, caching, and automated failover mechanisms to enhance network resiliency.
 
 ---
 
-## 9. Monetization & Incentives
+## 14. Conclusion
 
-### 9.1. ForYou Ads (Advertising Platform)
-- **Role:**  
-  A transparent system for advertising and sponsorships.
-- **Description:**  
-  Allows advertisers and content creators to run campaigns with clear, verifiable metrics. Ads include referral tracking fields to monitor performance and flag fraudulent behavior.
+The **ForYou Social Network** redefines digital interaction by combining:
 
-### 9.2. ForYou Micro (Micropayment Module)
-- **Role:**  
-  The engine handling all on‑chain micropayments on Bitcoin and Ethereum.
-- **Description:**  
-  Processes small‑value transactions for content submissions, archival retrievals, and other fee-based interactions.
+- **Decentralized Void‑Casting:**  
+  Posts are broadcast into a global space where AI-driven discovery ensures personalized content delivery.
 
-### 9.3. ForYou Track (Referral/Tracking System)
-- **Role:**  
-  Monitors ad performance and referral metrics.
-- **Description:**  
-  Provides transparent tracking for ad campaigns, ensuring accountability and proper reward distribution.
+- **Micropayment-Driven Ecosystem:**  
+  Robust fee structures—including higher fees for ads and retrieval fees for archived posts—support network operations and long‑term archival through Heritage servers.
+
+- **Community‑Driven Governance:**  
+  Transparent, democratic processes manage protocol evolution and compliance without centralized control.
+
+- **Optimized Client Experience:**  
+  ForYou Page, ForYou Pulse, and the official ForYou App offer a seamless, multi‑platform user experience—all powered by state‑of‑the‑art AI.
+
+By integrating advanced blockchain techniques, dynamic fee mechanisms, and open, public domain content principles, the ForYou Social Network stands as a pioneering model for decentralized social interaction.
 
 ---
 
-## 10. Standards for Client Implementations
-
-- **Open APIs and SDKs:**  
-  All client applications must implement the provided JSON schemas, support standardized Markdown rendering (with sanitization), and integrate with federated bridges.
-- **Interoperability:**  
-  Clients should support conversion to external formats (e.g., ActivityStreams for ActivityPub) and offer APIs for dynamic fee adjustments, staking, and node performance monitoring.
-- **Lightweight Node Support:**  
-  End‑user devices operate as super lightweight nodes with minimal local storage and caching.
-- **Certification:**  
-  The ForYou Federation will publish comprehensive documentation, SDKs, and an open certification process to ensure interoperability and consistency.
-
----
-
-## 11. Summary of the ForYou Ecosystem
-
-- **Core Domain:** **foryousocial.network**  
-  *A modern, personalized platform in the decentralized social space.*
-
-- **Core Entities:**  
-  - **ForYou Network:** The decentralized protocol for content sharing.  
-  - **ForYou Federation:** The community‑led governing body overseeing strategic decisions.  
-  - **ForYou Heritage:** The archival foundation preserving the platform’s historical link data.
-
-- **Node Roles:**  
-  - **Heritage Nodes:** Secure storage and archival.  
-  - **Flow Nodes:** Rapid, efficient content relay.  
-  - **ForYou Bridge:** Facilitators for cross‑chain connectivity with Bitcoin and Ethereum.
-
-- **Client & Interaction Platforms:**  
-  - **ForYou Page:** Personalized user timeline.  
-  - **ForYou Pulse:** Real‑time updates and trending content feed.  
-  - **ForYou Flow:** Dynamic content aggregation engine.  
-  - **ForYou App:** The official application interface.
-
-- **Governance & Value Systems:**  
-  - **ForYou Council:** The digital governance interface for stakeholder voting and proposals.  
-  - **ForYou Summit:** The high‑level forum for strategic planning and community leadership.
-  - **ForYou Federation:** Oversees overall network operations, ensuring transparency and accountability.
-
-- **Monetization & Incentives:**  
-  - **ForYou Ads:** Transparent advertising and sponsorship system.  
-  - **ForYou Micro:** The micropayment engine for all on‑chain transactions (Bitcoin and Ethereum only).  
-  - **ForYou Track:** The referral and performance tracking system.
-
-By adhering to this comprehensive specification, the **ForYou Social Ecosystem**—hosted at **foryousocial.network**—provides a secure, scalable, and truly decentralized social network that emphasizes personal connection, community‑driven governance, and modern, decentralized connectivity. Every technical and operational component is tied to the ForYou identity, ensuring a cohesive and memorable ecosystem for all users.
+**All content published via the ForYou Network is released under a public domain license.**  
+For the latest updates and detailed documentation, visit **[foryousocial.network](https://foryousocial.network)**.
