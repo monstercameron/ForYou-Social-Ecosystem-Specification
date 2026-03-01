@@ -14,6 +14,10 @@ This document covers:
 - reward distribution
 - launch payment constraints and future extensions
 
+## Machine-Readable Schemas
+
+The launch baseline JSON Schema library is in `schemas/launch.schema.json`.
+
 ## Economic Actions
 
 - Message submission
@@ -350,7 +354,7 @@ Example:
   "observed_amount": "0.0001",
   "observed_at": "2026-03-01T15:00:00Z",
   "acceptance_state": "provisional",
-  "verifier_id": "verifier-us-east-1",
+  "verifier_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
   "payment_class": "standard_post"
 }
 ```

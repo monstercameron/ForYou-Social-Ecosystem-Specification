@@ -10,6 +10,10 @@ This document is a draft transport and API specification with a provisional laun
 
 The keywords `MUST`, `SHOULD`, and `MAY` are to be interpreted as normative requirements for the launch baseline sections of this document. Other sections remain explanatory unless they are explicitly tied to launch behavior.
 
+## Machine-Readable Schemas
+
+The launch baseline JSON Schema library is in `schemas/launch.schema.json`.
+
 ## Design Goals
 
 - allow lightweight retrieval of rankable metadata

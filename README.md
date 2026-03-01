@@ -43,6 +43,8 @@ This specification is still a draft. The core model is in place, and some docume
 
 The active specification lives under [`docs/`](./docs/README.md).
 
+Machine-readable JSON Schemas live under `schemas/launch.schema.json`.
+
 Suggested reading order:
 
 - product and user model:

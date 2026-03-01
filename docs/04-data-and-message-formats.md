@@ -19,6 +19,10 @@ This document covers:
 - serialization and signing concerns
 - schema versioning rules
 
+## Machine-Readable Schemas
+
+The launch baseline JSON Schema library is in `schemas/launch.schema.json`.
+
 ## Message Model
 
 Every protocol message consists of:

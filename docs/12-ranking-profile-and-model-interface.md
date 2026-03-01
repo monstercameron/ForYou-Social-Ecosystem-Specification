@@ -10,6 +10,10 @@ This document is a draft interface specification intended to support interoperab
 
 The keywords `MUST`, `SHOULD`, and `MAY` are to be interpreted as normative requirements.
 
+## Machine-Readable Schemas
+
+The launch baseline JSON Schema library is in `schemas/launch.schema.json`.
+
 ## Goals
 
 - allow users to move ranking intent between clients
