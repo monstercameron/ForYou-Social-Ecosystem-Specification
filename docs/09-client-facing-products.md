@@ -85,8 +85,8 @@ For launch, the clean reading journey is:
 2. use local ranking by default or opt into remote ranking
 3. set personal filters and preferences
 4. browse a feed ranked for that user
-5. use public actions such as reply, quote, counterpoint, recommend, follow sources, follow topics, or subscribe to threads where desired
-6. use private curation such as hide, mute, bookmark, trust sources, boost, or downrank to tune local ranking
+5. use public actions such as `reply`, `quote`, `counterpoint`, `recommend`, `follow_source`, `follow_topic`, or `subscribe_thread` where desired
+6. use private curation such as `hide`, `mute`, `bookmark`, `trust_source`, `boost`, or `downrank` to tune local ranking
 7. let those choices shape future ranking without changing the network itself
 
 ## Social Interaction UX
@@ -102,27 +102,27 @@ Clients should distinguish clearly between:
 
 Launch public interaction surfaces should prioritize:
 
-- post
-- withdraw
-- reply
-- quote
-- counterpoint
-- recommend
-- follow source
-- follow topic
-- subscribe to thread
+- `post`
+- `withdraw`
+- `reply`
+- `quote`
+- `counterpoint`
+- `recommend`
+- `follow_source`
+- `follow_topic`
+- `subscribe_thread`
 
 Launch private portable interaction surfaces should prioritize:
 
-- mute
-- hide
-- block
-- bookmark
-- trust source
-- boost
-- downrank
-- private tag
-- private note
+- `mute`
+- `hide`
+- `block`
+- `bookmark`
+- `trust_source`
+- `boost`
+- `downrank`
+- `private_tag`
+- `private_note`
 
 Clients should present these interaction classes differently:
 

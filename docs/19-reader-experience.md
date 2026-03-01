@@ -56,22 +56,22 @@ From the reader's perspective:
 
 Public controls:
 
-- reply
-- quote
-- counterpoint
-- recommend
-- follow source
-- follow topic
-- subscribe to thread
+- `reply`
+- `quote`
+- `counterpoint`
+- `recommend`
+- `follow_source`
+- `follow_topic`
+- `subscribe_thread`
 
 Private curation controls:
 
-- mute
-- trust source
-- hide
-- bookmark
-- boost
-- downrank
+- `mute`
+- `trust_source`
+- `hide`
+- `bookmark`
+- `boost`
+- `downrank`
 - sensitivity preferences
 - local ranking mode choice
 
@@ -79,7 +79,7 @@ Public interactions shape shared social context.
 
 Private curation interactions such as mute, trust, hide, bookmark, boost, downrank, and notes shape only the reader's experience even when they are synchronized across the reader's own devices.
 
-Clients should treat public lightweight interactions such as recommend, follow source, follow topic, and subscribe to thread as weak shared context rather than as authoritative popularity truth.
+Clients should treat public lightweight interactions such as `recommend`, `follow_source`, `follow_topic`, and `subscribe_thread` as weak shared context rather than as authoritative popularity truth.
 
 Clients should allow lightweight public interactions to feel immediate and reconcile them with the network path in the background where possible.
 

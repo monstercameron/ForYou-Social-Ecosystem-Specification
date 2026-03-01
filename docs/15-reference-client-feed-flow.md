@@ -149,8 +149,8 @@ The client:
 
 - renders the personalized feed
 - surfaces ranking provenance to the user
-- accepts public actions such as reply, quote, counterpoint, recommend, follow source, follow topic, and subscribe to thread
-- accepts private curation actions such as mute, hide, trust source, boost, downrank, bookmark, and notes
+- accepts public actions such as `reply`, `quote`, `counterpoint`, `recommend`, `follow_source`, `follow_topic`, and `subscribe_thread`
+- accepts private curation actions such as `mute`, `hide`, `trust_source`, `boost`, `downrank`, `bookmark`, and `private_note`
 - feeds those actions back into local preference state for future ranking
 
 Public interaction actions should generate portable signed events when the client supports them.

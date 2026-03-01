@@ -327,7 +327,7 @@ For launch:
 - `private_state_update` should be treated as encrypted portable user-state sync rather than public social context
 - `alias_registration` should be treated as a baseline profile and handle message so users can identify each other without comparing raw key strings
 - `advertisement` remains a defined extension message type, but it `MUST NOT` be required for launch interoperability
-- private curation interactions such as mute, hide, block, bookmark, trust source, boost, downrank, private tags, and private notes may be carried through `private_state_update` without becoming public discovery metadata
+- private curation interactions such as `mute`, `hide`, `block`, `bookmark`, `trust_source`, `boost`, `downrank`, `private_tag`, and `private_note` may be carried through `private_state_update` without becoming public discovery metadata
 
 Content-type-specific target references such as `reply_to`, `target_message_id`, `target_author_id`, `target_topic`, and `target_thread_id` should live in the typed payload rather than the generic message envelope.
 
@@ -668,6 +668,67 @@ Device-group management baseline:
 - Adding a device is an out-of-band pairing UX.
 - When a new device is added, the client `SHOULD` publish a new compact snapshot encrypted to the updated recipient set so the new device can decrypt current state.
 - Clients `SHOULD` support an optional offline recovery key as an additional recipient so a user can restore private state even if all devices are lost.
+
+#### Launch Baseline Private-State Kinds
+
+`state_kind` identifies the plaintext schema carried inside `encrypted_state`.
+
+For launch, clients that support encrypted private portable state `SHOULD` support at least:
+
+- `curation.v1`
+
+`curation.v1` plaintext schema (recommended baseline):
+
+- plaintext `MUST` be a JSON object with `v: 1` (plaintext schema version)
+- plaintext `MAY` include unknown fields for forward compatibility
+- when present, these fields have the following meaning:
+  `muted_sources`:
+  list of canonical `author_id` values the reader wants muted
+  `blocked_sources`:
+  list of canonical `author_id` values the reader wants blocked
+  `hidden_message_ids`:
+  list of `message_id` values the reader wants hidden
+  `bookmarked_message_ids`:
+  list of `message_id` values the reader bookmarked
+  `trust_source_weights`:
+  map from `author_id` to a numeric trust weight (client-defined scale, but `0.0` to `1.0` is recommended)
+  `boost_source_weights`:
+  map from `author_id` to a numeric boost weight
+  `downrank_source_weights`:
+  map from `author_id` to a numeric downrank weight
+  `private_tags`:
+  map from `message_id` to a list of private tags
+  `private_notes`:
+  map from `message_id` to a private note string
+
+Example `curation.v1` plaintext (before encryption):
+
+```json
+{
+  "v": 1,
+  "muted_sources": ["did:key:z6Mk..."],
+  "blocked_sources": [],
+  "hidden_message_ids": ["msg-xyz"],
+  "bookmarked_message_ids": ["msg-123"],
+  "trust_source_weights": {
+    "did:key:z6Mk...trusted": 0.9
+  },
+  "boost_source_weights": {},
+  "downrank_source_weights": {},
+  "private_tags": {
+    "msg-123": ["read-later"]
+  },
+  "private_notes": {
+    "msg-123": "Worth revisiting."
+  }
+}
+```
+
+This plaintext `v` is distinct from `encrypted_state.v`, which versions the encryption envelope rather than the private-state contents.
+
+Extension note:
+
+- Additional private-state kinds such as lists, collections, reading queues, or profile pins may be represented as new `state_kind` values (for example `collections.v1`), but they are not part of the minimum interoperable launch baseline unless specified elsewhere.
 
 Example `private_state_update` payload:
 

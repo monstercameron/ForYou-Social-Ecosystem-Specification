@@ -148,19 +148,26 @@ User-owned ranking only works long term if private curation can survive device l
 ## Interaction Categories
 
 - Content lifecycle:
-  post, withdraw
+  `post`, `withdraw`
 - Response:
-  reply, quote, counterpoint
+  `reply`, `quote`, `counterpoint`
 - Amplification:
-  recommend
+  `recommend`
 - Public relationship:
-  follow source, follow topic, subscribe to thread
+  `follow_source`, `follow_topic`, `subscribe_thread`
 - Private curation:
-  mute, hide, block, bookmark, trust source, boost, downrank, private tag, private note
+  `mute`, `hide`, `block`, `bookmark`, `trust_source`, `boost`, `downrank`, `private_tag`, `private_note`
 - Extension curation:
-  add to list, add to collection, pin to profile, add to reading queue
+  `add_to_list`, `add_to_collection`, `pin_to_profile`, `add_to_reading_queue`
 - Extension action:
-  tip, bounty
+  `tip`, `bounty`
+
+Launch note:
+
+- There is intentionally no `like` action in the launch baseline.
+  `like` is ambiguous (bookmark vs public boost vs private ranking signal).
+  For launch, those intents are separated into:
+  `recommend` (public amplification), `bookmark` (private portable save), and private ranking controls such as `boost`, `downrank`, and `trust_source`.
 
 `follow_source` and `trust_source` are intentionally different.
 
@@ -219,13 +226,53 @@ Within public portable state, launch should still distinguish between:
 - Tier 1:
   paid public content writes such as post, reply, quote, and counterpoint
 - Tier 2:
-  lightweight public interactions such as recommend, follow source, follow topic, and subscribe to thread
+  lightweight public interactions such as `recommend`, `follow_source`, `follow_topic`, and `subscribe_thread`
 
 Tier 1 actions create public content and should remain fee-bearing.
 
 Tier 2 actions create shared social context, but they should be cheap, weak by default, and protected by funded allowance debits, batching, quotas, rate limits, or trust weighting.
 
 Private portable state should not become public ranking truth and should not need to masquerade as public interaction traffic just to survive across devices.
+
+## Interaction Taxonomy Mapping
+
+The interaction categories above are intent-based UX grouping.
+
+The protocol also has visibility and cost classes (`public portable`, `private portable`, `Tier 1`, `Tier 2`).
+These axes are orthogonal, so launch docs should keep both visible.
+
+Launch baseline mapping:
+
+```text
+ACTION             INTENT           VISIBILITY/PORTABILITY         COST CLASS
+---------------------------------------------------------------------------
+post               lifecycle        public portable                Tier 1
+withdraw            lifecycle        public portable                Tier 1
+reply              response         public portable                Tier 1
+quote              response         public portable                Tier 1
+counterpoint        response         public portable                Tier 1
+
+recommend           amplification    public portable                Tier 2
+follow_source       relationship     public portable                Tier 2
+follow_topic        relationship     public portable                Tier 2
+subscribe_thread    relationship     public portable                Tier 2
+
+mute               private curation  private portable (encrypted)   none
+hide               private curation  private portable (encrypted)   none
+block              private curation  private portable (encrypted)   none
+bookmark            private curation  private portable (encrypted)   none
+trust_source        private curation  private portable (encrypted)   none
+boost              private curation  private portable (encrypted)   none
+downrank            private curation  private portable (encrypted)   none
+private_tag         private curation  private portable (encrypted)   none
+private_note        private curation  private portable (encrypted)   none
+```
+
+Extension note:
+
+- Extension actions such as `tip`, `bounty`, `add_to_list`, `add_to_collection`, `pin_to_profile`, and `add_to_reading_queue`
+  are not standardized as interoperable protocol messages at launch.
+  Clients may still implement them privately (for example in encrypted private portable state), but they should not assume cross-client interoperability until the protocol defines them.
 
 ## Launch Interaction Direction
 
