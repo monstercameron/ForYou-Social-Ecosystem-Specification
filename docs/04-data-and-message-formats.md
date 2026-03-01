@@ -36,6 +36,8 @@ The following envelope fields are launch-critical and `MUST` be implemented for 
 
 - `message_id`
 - `author_id`
+- `signer_id`
+- `delegation`
 - `timestamp`
 - `message_type`
 - `version`
@@ -43,7 +45,6 @@ The following envelope fields are launch-critical and `MUST` be implemented for 
 
 The following fields are launch-critical when applicable:
 
-- `payment` for direct-payment fallback messages
 - `submission_receipt` for immediately metered plan-funded portable public messages
 - `submission_token` for asynchronously admitted lightweight public interactions
 - `content_address` for externally stored primary content
@@ -65,12 +66,14 @@ The following fields are launch-critical when applicable:
 
 ### Conditionally Required Fields
 
-- `payment`
-  required for any direct-payment fallback message
 - `submission_receipt`
   required for any portable public message that uses immediate per-message metering
 - `submission_token`
   permitted for Tier 2 lightweight public interactions that use token-based asynchronous admission
+- `signer_id`
+  required when the signing key is not the same as `author_id`
+- `delegation`
+  required when `signer_id` is present and differs from `author_id`
 - `content_address`
   required for any message whose primary content is stored externally
 
@@ -90,42 +93,50 @@ The following fields are launch-critical when applicable:
 - `author_id` `MUST` use the canonical identity format defined by the identity specification.
 - `timestamp` `MUST` be a valid RFC 3339 UTC timestamp.
 - `message_type` `MUST` be recognized by the receiving implementation or rejected as unsupported.
-- `version` `MUST` be a positive integer.
-- `signature` `MUST` verify against the canonical serialization and author identity.
+- `version.major` `MUST` be a positive integer.
+- `version.minor` `MUST` be a non-negative integer.
+- `signature` `MUST` verify against the canonical serialization and the declared signing identity:
+  `signer_id` if present, otherwise `author_id`.
+- If `signer_id` is present and differs from `author_id`, `delegation` `MUST` be present and `MUST` verify as an authorization from `author_id` to `signer_id`.
+- If `content_address` is present, it `MUST` use the launch content-address scheme:
+  `ipfs://<cidv1>` with CIDv1 base32 encoding.
 
 ## Payment Object
 
 ### Required Fields
 
 - `chain`
-- `transaction_id`
+- `funding_reference`
 - `amount`
 
 ### Optional Fields
 
 - `block_reference`
-- `confirmation_status`
 - `payment_class`
-- `verified_by`
+- `acceptance_state`
+- `verifier_id`
 
 ### Validation Rules
 
-- Direct-payment fallback messages `MUST` include a `payment` object.
+- The interoperable launch baseline does not require per-message direct BTC/ETH payment references.
 - Tier 1 plan-funded portable public messages `MUST` include a `submission_receipt`.
 - Tier 2 plan-funded portable public messages `MUST` include either a `submission_receipt` or a `submission_token`.
-- Messages that are neither direct-payment fallback messages nor plan-funded portable public messages `MAY` omit both.
+- Messages that are not Tier 1 or Tier 2 portable public messages `MAY` omit payment-related objects unless a later extension standardizes them.
 - `chain` `MUST` be a supported payment network identifier.
-- `transaction_id` `MUST` be parseable by the relevant bridge or payment verifier.
+- `funding_reference` `MUST` be parseable by the relevant verifier for the declared chain.
+- `acceptance_state`, if present, `MUST` be one of:
+  `provisional`, `verified`, or `rejected`.
+- `verifier_id`, if present, `MUST` be a canonical host or service identity reference.
 
 ### Launch-Critical Payment Fields
 
 The launch-critical payment fields are:
 
 - `chain`
-- `transaction_id`
+- `funding_reference`
 - `amount`
 
-`confirmation_status` and `verified_by` are strongly recommended at launch even if they are produced after initial client submission.
+`acceptance_state` and `verifier_id` are strongly recommended at launch even if they are produced after initial client submission.
 
 ## Submission Receipt Object
 
@@ -146,6 +157,8 @@ This object is used when a portable public message is admitted against a pre-fun
 - `period_end`
 - `tier`
 - `remaining_units_hint`
+- `audit_log_root`
+- `audit_proof_ref`
 
 ### Validation Rules
 
@@ -154,6 +167,8 @@ This object is used when a portable public message is admitted against a pre-fun
 - `units_charged` `MUST` be a positive integer or decimal value according to provider plan rules.
 - `provider_signature` `MUST` verify against `provider_id`.
 - `receipt_id` `MUST NOT` be reused across distinct accepted messages.
+- `audit_log_root`, if present, `SHOULD` be a stable provider-published log root hash for receipt auditability.
+- `audit_proof_ref`, if present, `SHOULD` be a URL or content address that can be used to fetch an inclusion proof for `receipt_id`.
 
 ### Launch-Critical Submission-Receipt Fields
 
@@ -187,6 +202,8 @@ This object is used when a provider grants short-window or session-scoped admiss
 - `remaining_units_hint`
 - `redeemer_scope`
 - `device_group_id`
+- `audit_log_root`
+- `audit_proof_ref`
 
 ### Validation Rules
 
@@ -197,6 +214,8 @@ This object is used when a provider grants short-window or session-scoped admiss
 - `valid_until` `MUST` be later than `valid_from`.
 - `provider_signature` `MUST` verify against `provider_id`.
 - `token_id` `MUST NOT` be reused as if it were a per-message receipt identifier.
+- `audit_log_root`, if present, `SHOULD` be a stable provider-published log root hash for token auditability.
+- `audit_proof_ref`, if present, `SHOULD` be a URL or content address that can be used to fetch an inclusion proof for `token_id`.
 
 ### Launch-Critical Submission-Token Fields
 
@@ -209,6 +228,40 @@ This object is used when a provider grants short-window or session-scoped admiss
 - `valid_from`
 - `valid_until`
 - `provider_signature`
+
+## Delegation Object
+
+This object is used when a message is signed by a `signer_id` that is different from the stable `author_id`.
+
+### Required Fields
+
+- `author_id`
+- `signer_id`
+- `delegation_id`
+- `valid_from`
+- `valid_until`
+- `delegation_signature`
+
+### Optional Fields
+
+- `scope`
+
+### Validation Rules
+
+- `author_id` and `signer_id` `MUST` use canonical identity references.
+- `valid_until` `MUST` be later than `valid_from`.
+- `delegation_signature` `MUST` verify against `author_id`.
+- If `scope` is present, the receiving implementation `MUST` enforce it.
+- Delegations `SHOULD` be short-lived.
+
+### Launch-Critical Delegation Fields
+
+- `author_id`
+- `signer_id`
+- `delegation_id`
+- `valid_from`
+- `valid_until`
+- `delegation_signature`
 
 ## Host Hint Object
 
@@ -268,10 +321,11 @@ For launch:
 
 - `reply` remains a first-class message type
 - replies `MUST` include `reply_to`
-- replies `SHOULD` include `thread_id` when a thread context exists
+- replies `MUST` include `thread_id`
 - `quote`, `counterpoint`, `recommend`, `follow_source`, `follow_topic`, and `subscribe_thread` should be treated as portable public interaction types
 - `withdraw` should be treated as a tombstone-producing target-state update rather than a cascading deletion primitive
 - `private_state_update` should be treated as encrypted portable user-state sync rather than public social context
+- `alias_registration` should be treated as a baseline profile and handle message so users can identify each other without comparing raw key strings
 - `advertisement` remains a defined extension message type, but it `MUST NOT` be required for launch interoperability
 - private curation interactions such as mute, hide, block, bookmark, trust source, boost, downrank, private tags, and private notes may be carried through `private_state_update` without becoming public discovery metadata
 
@@ -285,22 +339,24 @@ At launch, canonical message types fall into these state classes:
   `post`, `reply`, `quote`, `counterpoint`, and `withdraw`
 - lightweight public interaction messages:
   `recommend`, `follow_source`, `follow_topic`, and `subscribe_thread`
+- public profile and handle messages:
+  `alias_registration`
 - private portable sync messages:
   `private_state_update`
 - device-local-only actions:
   non-canonical transient client-local behavior outside protocol message requirements
 - Extension types:
-  `advertisement`, `alias_registration`, and `poll` may be supported, but they are not required for launch interoperability
+  `advertisement` and `poll` may be supported, but they are not required for launch interoperability
 
 Validation and operator behavior should reflect these different risk profiles.
 
 - Tier 1 messages `MUST` satisfy the submission-funding rules for their action class.
-- Tier 1 portable public messages `MUST` include either a valid `submission_receipt` or a valid direct-payment `payment` object.
-- Tier 2 portable public messages `MUST` include one of:
-  a valid `submission_receipt`, a valid `submission_token`, or a valid direct-payment `payment` object.
-- Tier 2 messages `MUST` be signed and portable, but they `MUST NOT` require their own base-layer BTC or ETH payment reference in the normal launch path.
+- Tier 1 portable public messages `MUST` include a valid `submission_receipt`.
+- Tier 2 portable public messages `MUST` include a valid `submission_receipt` or a valid `submission_token`.
+- Tier 2 messages `MUST` be signed and portable, but they `MUST NOT` require their own base-layer BTC or ETH payment reference in the launch baseline.
 - Tier 2 messages `SHOULD` support optimistic local acceptance and delayed provider reconciliation rather than blocking the user on a synchronous provider round trip for each tap.
 - Providers accepting Tier 2 messages `MUST` apply at least one abuse-control mechanism such as funded allowance debits, rate limiting, bounded quota windows, or equivalent submission controls.
+- `alias_registration` messages `MUST` be signed and `MUST` include Tier 2 admission evidence (`submission_receipt` or `submission_token`).
 - `private_state_update` messages `MUST` be encrypted, `MUST NOT` be exposed through public candidate metadata, and `MUST NOT` be treated as shared social context.
 - `private_state_update` messages `MUST NOT` require a `submission_receipt` or direct-payment `payment` object in the normal launch path.
 - device-local-only actions `MUST NOT` be treated as canonical network messages at launch.
@@ -341,7 +397,7 @@ Required payload fields:
 
 Expected envelope support:
 
-- `thread_id` `SHOULD` be present
+- `thread_id` `MUST` be present and should equal the root message identifier for the thread
 
 Launch-critical reply support:
 
@@ -470,6 +526,10 @@ Validation notes:
 
 - `follow_topic` is a lightweight public interaction.
 - A `follow_topic` message `MUST` be signed by the acting identity.
+- `target_topic` `MUST` be a canonical topic key:
+  lowercase ASCII, digits, and hyphens only, with no spaces.
+- Topic keys are lexical identifiers, not a guaranteed universal ontology.
+- Clients and providers `SHOULD` treat topic follows as discovery and routing hints rather than as global semantic truth.
 
 ### Subscribe Thread
 
@@ -489,6 +549,7 @@ Validation notes:
 
 - `subscribe_thread` is a lightweight public interaction.
 - A `subscribe_thread` message `MUST` be signed by the acting identity.
+- `target_thread_id` should be the `thread_id` value used by replies in the same thread.
 
 ### Withdraw
 
@@ -522,6 +583,7 @@ Required payload fields:
 
 - `state_kind`
 - `encrypted_state`
+- `encryption_scheme`
 - `encryption_scope`
 - `state_sequence`
 
@@ -540,6 +602,7 @@ Launch-critical private-state-update support:
 
 - `state_kind`
 - `encrypted_state`
+- `encryption_scheme`
 - `encryption_scope`
 - `state_sequence`
 
@@ -548,11 +611,89 @@ Validation notes:
 - `private_state_update` is encrypted portable user state, not public social content.
 - A `private_state_update` message `MUST` be signed by the acting identity.
 - A `private_state_update` message `MUST` be encrypted for the user's own devices, delegates, or chosen sync service.
+- `encryption_scheme` `MUST` be one of the launch-supported schemes declared by the client.
+- Launch interoperability `MUST` support:
+  `x25519-xchacha20poly1305`.
 - A `private_state_update` message `MUST NOT` appear in public candidate discovery surfaces.
 - Providers `MAY` store or relay the encrypted object without interpreting the private contents.
 - `private_state_update` `SHOULD` carry compact snapshots or bounded deltas rather than one network object per trivial UI toggle.
 - `supersedes` and `state_sequence` should be used to compact old private state rather than create unbounded event logs.
 - Providers `MAY` garbage-collect superseded private-state objects after the user's sync policy or retention policy permits it.
+
+#### Launch Baseline Private-State Encryption
+
+For launch, `private_state_update` defines encrypted portable state that can sync across the user's own devices without publishing their private preferences or moderation choices as public metadata.
+
+Launch baseline values:
+
+- `encryption_scope` `MUST` be `device_group`.
+- `device_group_id` `MUST` be present when `encryption_scope` is `device_group`.
+- `device_group_id` `SHOULD` be a random base64url identifier generated by the client when the user enables sync.
+
+Launch baseline `encrypted_state` shape:
+
+- `encrypted_state` `MUST` be a JSON object with:
+  `v`, `nonce`, `ciphertext`, and `recipients`
+- `recipients` `MUST` be a non-empty list of recipient entries
+
+Recipient entry shape:
+
+- `kid`
+  key identifier (client-defined)
+- `recipient_pubkey`
+  base64url X25519 public key (32 bytes)
+- `epk`
+  base64url ephemeral X25519 public key (32 bytes)
+- `wrap_nonce`
+  base64url XChaCha20-Poly1305 nonce (24 bytes)
+- `wrapped_key`
+  base64url ciphertext of the 32-byte content key
+
+Launch baseline encryption scheme `x25519-xchacha20poly1305`:
+
+1. The plaintext is UTF-8 JSON bytes representing the private state snapshot or bounded delta.
+2. Generate a random 32-byte `content_key` and a random 24-byte `nonce`.
+3. Encrypt the plaintext using XChaCha20-Poly1305 with `content_key` and `nonce`.
+4. For each recipient public key:
+   - generate an ephemeral X25519 keypair
+   - compute the X25519 shared secret
+   - derive a 32-byte wrapping key using HKDF-SHA256 with:
+     `info = "foryou-private-state-wrap-v1"`
+   - encrypt the 32-byte `content_key` using XChaCha20-Poly1305 under the wrapping key
+5. Additional authenticated data (AAD) `SHOULD` bind the encryption to the message:
+   `author_id`, `device_group_id`, `state_kind`, and `state_sequence`.
+
+Device-group management baseline:
+
+- Adding a device is an out-of-band pairing UX.
+- When a new device is added, the client `SHOULD` publish a new compact snapshot encrypted to the updated recipient set so the new device can decrypt current state.
+- Clients `SHOULD` support an optional offline recovery key as an additional recipient so a user can restore private state even if all devices are lost.
+
+Example `private_state_update` payload:
+
+```json
+{
+  "state_kind": "curation.v1",
+  "encryption_scheme": "x25519-xchacha20poly1305",
+  "encryption_scope": "device_group",
+  "device_group_id": "dg_Ykz4Y2pQfWQp0b0x3uQ9aA",
+  "state_sequence": 42,
+  "encrypted_state": {
+    "v": 1,
+    "nonce": "b64url-24-bytes",
+    "ciphertext": "b64url-ciphertext",
+    "recipients": [
+      {
+        "kid": "device-1",
+        "recipient_pubkey": "b64url-x25519-pubkey",
+        "epk": "b64url-ephemeral-pubkey",
+        "wrap_nonce": "b64url-24-bytes",
+        "wrapped_key": "b64url-wrapped-key"
+      }
+    ]
+  }
+}
+```
 
 ### Alias Registration
 
@@ -562,6 +703,7 @@ Required payload fields:
 
 Optional payload fields:
 
+- `namespace`
 - `display_name`
 - `bio`
 - `avatar_reference`
@@ -574,6 +716,12 @@ Expected envelope support:
 Launch-critical alias-registration support:
 
 - `alias`
+
+Validation notes:
+
+- `alias_registration` provides a namespaced handle for user-facing UX, not a replacement for `author_id`.
+- If `namespace` is omitted, clients should treat the namespace as `author_id` (self-namespaced alias).
+- If `namespace` is present, clients should display the handle as `@alias@namespace` and should not assume global uniqueness.
 
 ### Poll
 
@@ -604,16 +752,13 @@ Launch-critical poll support:
 
 ## Launch Canonical JSON Rules
 
-For launch, canonical JSON serialization uses these rules:
+For launch, canonical JSON serialization `MUST` follow RFC 8785 (JSON Canonicalization Scheme, JCS).
+
+Launch-specific requirements:
 
 - the signed object `MUST` include the envelope and payload fields required for message validation
 - the `signature` field itself `MUST NOT` be included in the signed byte sequence
-- object keys `MUST` be serialized in lexicographic order
-- UTF-8 `MUST` be used as the byte encoding
-- insignificant whitespace `MUST NOT` be included
-- numbers `SHOULD` be serialized in a stable minimal JSON form
-- arrays `MUST` preserve application-defined order
-- `null` fields `SHOULD` be omitted unless semantically required by the schema
+- implementations `MUST` not introduce optional fields with default values that change signed bytes
 
 ## Signed Object Shape
 
@@ -631,7 +776,8 @@ The baseline signature process is:
 1. construct the envelope without `signature`
 2. attach the typed payload
 3. serialize the combined object using canonical JSON rules
-4. sign the resulting UTF-8 byte sequence with the author's key material
+4. sign the resulting UTF-8 byte sequence with the signing key material:
+   `signer_id` if present, otherwise `author_id`
 5. encode the resulting signature in the `signature` field
 
 ## Example Envelope
@@ -642,7 +788,10 @@ The baseline signature process is:
   "author_id": "did:key:z6MkrJVnaZkeuWiRiwXQDq6rYmQXW1Lg31xHn3pV3hokW2Pp",
   "timestamp": "2026-03-01T14:00:00Z",
   "message_type": "post",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "content_address": "ipfs://bafyexample",
   "language": "en",
   "keywords": ["distributed-systems", "indexing"],
@@ -675,24 +824,28 @@ Example launch message envelope:
   "author_id": "did:key:z6MkrJVnaZkeuWiRiwXQDq6rYmQXW1Lg31xHn3pV3hokW2Pp",
   "timestamp": "2026-03-01T14:00:00Z",
   "message_type": "post",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "content_address": "ipfs://bafyexample",
   "language": "en",
   "keywords": ["distributed-systems", "indexing"],
-  "payment": {
-    "chain": "bitcoin",
-    "transaction_id": "tx-123",
-    "amount": "0.0001",
-    "payment_class": "standard_post"
+  "submission_receipt": {
+    "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
+    "plan_id": "annual-heavy-2026",
+    "receipt_id": "receipt-post-123",
+    "message_id": "msg-123",
+    "units_charged": 1,
+    "provider_signature": "base64-provider-signature"
   },
   "signature": "base64-signature"
 }
 ```
 
-Direct-payment fallback note:
+Launch note:
 
-- this example shows the fallback path
-- the normal launch path should prefer `submission_receipt` on top of a previously funded plan
+- this example shows the normal plan-funded path
 
 Example launch payload:
 
@@ -719,11 +872,13 @@ Example signed object:
   "language": "en",
   "message_id": "msg-123",
   "message_type": "post",
-  "payment": {
-    "amount": "0.0001",
-    "chain": "bitcoin",
-    "payment_class": "standard_post",
-    "transaction_id": "tx-123"
+  "submission_receipt": {
+    "message_id": "msg-123",
+    "plan_id": "annual-heavy-2026",
+    "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
+    "provider_signature": "base64-provider-signature",
+    "receipt_id": "receipt-post-123",
+    "units_charged": 1
   },
   "payload": {
     "attachments": [],
@@ -736,7 +891,10 @@ Example signed object:
     }
   },
   "timestamp": "2026-03-01T14:00:00Z",
-  "version": 1
+  "version": {
+    "major": 1,
+    "minor": 0
+  }
 }
 ```
 
@@ -752,7 +910,10 @@ Envelope:
   "author_id": "did:key:z6Mkf8x8P5gL6N8sYZZs1xP7vC18JNpDutLCRa14Qdqgttxy",
   "timestamp": "2026-03-01T14:05:00Z",
   "message_type": "reply",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "content_address": "ipfs://bafyreplyexample",
   "submission_receipt": {
     "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
@@ -762,7 +923,7 @@ Envelope:
     "units_charged": 1,
     "provider_signature": "base64-provider-signature"
   },
-  "thread_id": "thread-88",
+  "thread_id": "msg-123",
   "signature": "base64-signature"
 }
 ```
@@ -787,7 +948,10 @@ Envelope:
   "author_id": "did:key:z6MkpTHR8V4QjzvY4xXHzkwmo7aX6ixkmKuuNHYsYkdivgLP",
   "timestamp": "2026-03-01T14:07:00Z",
   "message_type": "quote",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "content_address": "ipfs://bafyquoteexample",
   "submission_receipt": {
     "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
@@ -797,7 +961,7 @@ Envelope:
     "units_charged": 1,
     "provider_signature": "base64-provider-signature"
   },
-  "thread_id": "thread-88",
+  "thread_id": "msg-123",
   "signature": "base64-signature"
 }
 ```
@@ -822,7 +986,10 @@ Envelope:
   "author_id": "did:key:z6MkrJVnaZkeuWiRiwXQDq6rYmQXW1Lg31xHn3pV3hokW2Pp",
   "timestamp": "2026-03-01T14:10:00Z",
   "message_type": "recommend",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "submission_receipt": {
     "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
     "plan_id": "annual-heavy-2026",
@@ -854,7 +1021,10 @@ Envelope:
   "author_id": "did:key:z6MkpTHR8V4QjzvY4xXHzkwmo7aX6ixkmKuuNHYsYkdivgLP",
   "timestamp": "2026-03-01T14:12:00Z",
   "message_type": "follow_source",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "submission_receipt": {
     "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
     "plan_id": "annual-heavy-2026",
@@ -885,7 +1055,10 @@ Envelope:
   "author_id": "did:key:z6Mkf8x8P5gL6N8sYZZs1xP7vC18JNpDutLCRa14Qdqgttxy",
   "timestamp": "2026-03-01T14:14:00Z",
   "message_type": "follow_topic",
-  "version": 1,
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
   "submission_receipt": {
     "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
     "plan_id": "annual-heavy-2026",

@@ -32,8 +32,9 @@ Provide plain-text diagrams that represent the ForYou network, ranking flow, and
       |               |                |                      |
       |               v                |                      v
       |        +--------------+        |              +------------------+
-      |        | Bridge Nodes | <------+              | Candidate Chunk  |
-      |        | BTC / ETH    |                       | Retrieval        |
+      |        | Verification | <------+              | Candidate Chunk  |
+      |        | Nodes        |                       | Retrieval        |
+      |        | BTC / ETH    |
       |        +------+-------+                       +---------+--------+
       |               |                                         |
       |               v                                         v

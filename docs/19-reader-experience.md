@@ -50,6 +50,7 @@ From the reader's perspective:
 - The client `SHOULD` explain when content is unavailable from one provider but may exist elsewhere.
 - The client `MUST NOT` treat ranking or filtering as protocol truth.
 - The client `SHOULD` support encrypted sync or export for private curation state.
+- The client `SHOULD` display aliases and profiles when available, while showing a short fingerprint of `author_id` to reduce impersonation.
 
 ## Reader Controls
 

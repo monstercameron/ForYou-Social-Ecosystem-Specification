@@ -18,6 +18,16 @@ The keywords `MUST`, `SHOULD`, and `MAY` are to be interpreted as normative requ
 - allow multiple index providers to coexist
 - keep private portable user-state out of public discovery surfaces
 
+## Candidate Gatekeeping Reality
+
+Clients can only rank what they receive as candidates. That means candidate selection is an upstream power layer.
+
+Launch mitigations:
+
+- clients `SHOULD` query multiple independent providers and merge candidate sets
+- providers `SHOULD` offer at least one "broad" candidate mode (recent, random sample, or unfiltered-by-topic) so new users are not trapped in a zero-candidate cold start
+- clients `SHOULD` treat provider candidate sets as advisory inputs rather than as the authoritative universe of content
+
 This document defines the canonical launch endpoint surface. Higher-level retrieval invariants belong in the architecture document, and availability/retention behavior belongs in the storage document.
 
 ## Roles
@@ -52,6 +62,18 @@ At launch, a provider may publish service terms for discovery and retrieval, inc
 - locality or policy restrictions
 
 The protocol should not assume that every serious provider offers unlimited anonymous reads for free.
+
+### Optional Service-Access Evidence
+
+To avoid a pure free-rider model on the read path, providers `MAY` require service-access evidence for higher-volume discovery or retrieval.
+
+Launch direction:
+
+- a provider `MAY` accept a provider-signed token as service-access evidence
+- the token may be derived from the user's funded plan (bundled access), a reader plan, or an operator subscription
+- requests without evidence may still be served under a limited public tier
+
+This document does not standardize one mandatory token transport at launch. Providers should keep access terms explicit and simple.
 
 ## Host and Content Hints
 
@@ -105,6 +127,11 @@ Clients `MAY` request chunks using filters such as:
 - content type filter
 - pagination cursor
 - maximum item count
+
+Topic note:
+
+- `target_topic` keys are lexical identifiers, not a universal global ontology.
+- providers `MAY` publish recommended topic taxonomies, alias maps, or suggested keys, but clients should not assume cross-provider semantic equivalence unless explicitly declared.
 
 ## Response Shape
 

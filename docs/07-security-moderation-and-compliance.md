@@ -91,12 +91,29 @@ Launch should not assume that generic providers blindly propagate all metadata r
 
 For severe illegal content classes under applicable law, such as child sexual abuse material or similarly prohibited material:
 
-- accepting providers `MAY` reject publication before broad propagation
-- index providers `MAY` refuse to index or return metadata pointers
-- hosts `MAY` refuse storage, relay, caching, or serving
-- providers `MAY` use shared deny-lists, hash lists, or legal process inputs to reduce repeated re-distribution
+- accepting providers `MUST` refuse publication when they have credible reason to believe the content is severe-illegal material under applicable law
+- index providers `MUST` refuse to index or return metadata pointers for known severe-illegal material under applicable law
+- hosts `MUST` refuse storage, relay, caching, or serving for known severe-illegal material under applicable law
+- providers `MUST` support ingestion of shared deny-lists or hash lists where legally available and technically feasible to reduce repeated re-distribution
 
 The protocol should distinguish between reader-side filtering for ordinary content and provider-side refusal to handle severe illegal material.
+
+Launch note:
+
+- This is a strict-liability risk area. Treating severe-illegal handling as optional creates operator liability.
+- The protocol cannot guarantee detection of unknown illegal material, but it can require refusal behavior for known or credibly reported material.
+
+## Takedown and Erasure Reality
+
+The protocol is designed so that local removal does not imply global deletion. That property improves censorship resistance, but it creates legal friction in some jurisdictions.
+
+Launch should therefore be explicit:
+
+- `withdraw` is a protocol-visible tombstone and target-state update, not a guarantee of global deletion
+- operators in some jurisdictions may be legally required to purge stored content and stored metadata earlier than their advertised retention floors
+- operators should treat legally valid takedown or erasure requests as local obligations that can override service commitments
+
+The spec should not claim a universal right-to-erasure guarantee across all hosts. It should instead specify best-effort local compliance behavior and make jurisdictional participation constraints explicit.
 
 ## Reader-Side Filtering
 
@@ -118,6 +135,19 @@ For launch:
 - abusive interaction floods `MAY` be deprioritized, rejected, or discounted without changing the validity rules for paid public content writes
 
 This keeps the protocol expressive while limiting the value of bot-swarm inflation.
+
+## Counterpoint Harassment Risk
+
+`counterpoint` is a useful response primitive, but it is also an easy harassment primitive because it attaches conflict to a target without the target's consent.
+
+Launch mitigations:
+
+- clients `SHOULD` make `counterpoint` rendering a reader-controlled choice:
+  collapsed by default, trust-weighted, or hidden unless explicitly expanded
+- clients `SHOULD` support per-source and per-thread controls that can hide or downrank counterpoints without affecting network validity
+- providers accepting `counterpoint` writes `SHOULD` apply per-target and per-author rate limits to reduce dogpiling and targeted harassment
+- index providers `SHOULD` allow clients to request counterpoints as a separate optional stream rather than forcing them into the default reply stream
+- clients and providers `MUST NOT` treat counterpoint volume as a positive engagement signal by default
 
 ## Operator Compliance Boundaries
 

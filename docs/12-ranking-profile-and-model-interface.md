@@ -154,7 +154,7 @@ The keywords `MUST`, `SHOULD`, and `MAY` are to be interpreted as normative requ
   "language": "en",
   "content_type": "post",
   "keywords": ["distributed-systems", "indexing"],
-  "thread_id": "thread-88",
+  "thread_id": "msg-123",
   "reply_to": null,
   "content_address": "ipfs://bafyexample",
   "payment_class": "standard",

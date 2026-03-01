@@ -24,15 +24,15 @@ This document covers:
 
 - Flow Node:
   propagates new messages and may maintain regional or local caches
-- Bridge Node:
-  verifies external payment events and produces normalized payment status for the network
+- Verification Node:
+  verifies external funding events (plan funding) and produces normalized verification artifacts for the network
 
 ## Role Responsibilities
 
 - Flow Node responsibilities:
   relay messages, maintain availability, support fast retrieval, participate in retention, and help distribute cached content
-- Bridge Node responsibilities:
-  verify BTC and ETH funding or direct-payment fallback references, expose confirmation status, and reduce payment interpretation ambiguity
+- Verification Node responsibilities:
+  verify BTC/ETH plan funding references (including supported rails), expose confirmation status, and reduce payment interpretation ambiguity
 
 ## Revenue-Relevant Role Classes
 
@@ -170,26 +170,31 @@ Future transports may include:
 
 The object and verification model should survive transport change.
 
-## Bridge Node Baseline Interface
+## Verification Node Baseline Interface
 
-A bridge node `SHOULD` expose:
+Verification is a role, not a single mandatory authority.
 
-- payment or plan-funding verification by declared chain and transaction identifier
+Any host or provider may perform verification locally using its own BTC/ETH infrastructure, or may consume verification artifacts from other verifiers.
+
+A verification node `SHOULD` expose:
+
+- plan-funding verification by declared chain and funding reference
 - normalized payment status output
 - clear failure reasons for malformed or insufficient funding references
 
-Bridge output is authoritative for payment interpretation within the node's operating policy, but it does not replace message-signature verification or schema validation performed elsewhere.
+Verification output is authoritative only within the verifier's declared operating policy.
 
-## Bridge Proof Shape
+It does not replace message-signature verification or schema validation performed elsewhere.
 
-A bridge proof should minimally include:
+## Verification Proof Shape
+
+A verification proof should minimally include:
 
 - `chain`
-- `transaction_id`
-- `verification_status`
-- `confirmation_state`
+- `funding_reference`
+- `acceptance_state`
 - `observed_amount`
-- `bridge_id`
+- `verifier_id`
 
 This proof is the normalized payment-verification artifact consumed by flow nodes and related services.
 
@@ -198,14 +203,14 @@ This proof is the normalized payment-verification artifact consumed by flow node
 For launch, the minimum viable network likely requires:
 
 - flow nodes for message propagation and basic acceptance
-- bridge nodes for payment verification
+- at least one verification-capable path for plan funding (which may be provided by the accepting provider itself)
 - at least one index-provider-capable node path for candidate discovery
 
 Retention exists at launch, but it is part of the baseline posting service rather than a separate user-facing service.
 
 ## Open Decisions
 
-- Can one implementation combine Flow and Bridge roles?
+- Can one implementation combine Flow and Verification roles?
 - How should role-level service guarantees be measured at launch?
 
 ## Related Documents

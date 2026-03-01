@@ -77,6 +77,8 @@ The protocol `MAY` expose:
 - `is_ad` `MUST NOT` be omitted for paid promotional content.
 - `content_address` `MUST` resolve to retrievable content or a verifiable retrieval failure state.
 - if a provider exposes `message_status` or `target_status`, the values `SHOULD` distinguish at least `active`, `withdrawn`, `unavailable`, and `blocked` where applicable.
+- if `thread_id` is present, it `SHOULD` equal the root message identifier for the thread
+- if `target_topic` is present, it `SHOULD` use the canonical topic-key normalization rules (lowercase ASCII, digits, hyphens)
 
 ## Privacy Boundaries
 
@@ -119,7 +121,7 @@ The protocol `MUST NOT` require publication of:
   "content_address": "ipfs://bafyexample",
   "language": "en",
   "is_ad": false,
-  "thread_id": "thread-88",
+  "thread_id": "msg-123",
   "message_status": "active",
   "target_status": null,
   "reply_count": 3,

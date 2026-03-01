@@ -31,7 +31,7 @@ The poster pays for publication, not for guaranteed audience reach.
 - publish without asking permission from a central platform
 - understand the cost before posting
 - complete the publish flow in one clear action
-- know whether the post is pending, provisionally published, or published
+- know whether the post is pending or published
 - understand that reader visibility is decided by readers, not by the poster
 
 ## Baseline Poster Journey
@@ -43,7 +43,7 @@ The poster pays for publication, not for guaranteed audience reach.
 5. write a post or reply
 6. review the allowance impact or fallback cost
 7. approve publish
-8. wait for `pending`, `provisionally published`, or `published`
+8. wait for `pending` or `published`
 9. optionally withdraw the post later through the chosen client
 10. optionally share or monitor engagement through the chosen client
 
@@ -51,7 +51,7 @@ The poster pays for publication, not for guaranteed audience reach.
 
 - The client `MUST` show plan status, allowance impact, or fallback cost before publish approval.
 - The client `SHOULD` make plan-funded publishing feel like one action.
-- The client `MUST` distinguish between `pending`, `provisionally published`, and `published`.
+- The client `MUST` distinguish between `pending` and `published`.
 - The client `SHOULD` explain that network publication does not guarantee ranking or visibility in every reader feed.
 - The client `MUST NOT` imply that the client operator controls global publication rights.
 - The client `SHOULD` support a clear withdraw flow for the author's own prior content.
@@ -59,9 +59,7 @@ The poster pays for publication, not for guaranteed audience reach.
 ## Poster Status Model
 
 - `pending`
-  the publish request has been submitted but is not yet sufficiently confirmed
-- `provisionally published`
-  the post is accepted on the provisional path and may be visible while payment confirmation strengthens
+  the publish request has been submitted but is not yet accepted by a network path
 - `published`
   the post is fully accepted on the launch baseline
 

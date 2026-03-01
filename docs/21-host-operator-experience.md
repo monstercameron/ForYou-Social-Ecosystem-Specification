@@ -63,9 +63,9 @@ From the host operator's perspective:
 
 If the host is an accepting provider:
 
-- it may receive plan funding or direct-payment fallback fees directly
+- it may receive plan funding directly
 - it may publish supported chains, plan classes, fee classes, and recipient references
-- it may share revenue operationally with bridge, index, or storage partners
+- it may share revenue operationally with verification, index, or storage partners
 - it may contribute a network service share into shared service buckets
 
 If the host advertises retained-provider behavior:
@@ -89,7 +89,7 @@ If the host participates in shared-bucket rewards:
 ## Operator Failure Cases
 
 - peer loss
-- bridge verification outage
+- funding verification outage
 - stale host hints
 - storage miss
 - local legal restriction

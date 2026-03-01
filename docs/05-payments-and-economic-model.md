@@ -34,18 +34,39 @@ For launch, the minimum interoperable settlement baseline is:
 
 - BTC or ETH funds a provider-issued publish plan or allowance balance
 - portable public writes consume allowance units against that funded plan
-- direct per-message BTC or ETH settlement remains an allowed fallback, not the preferred user path
+- providers and clients may use cheaper BTC/ETH rails for plan funding, but the settlement asset remains BTC or ETH
 
 Launch should not require:
 
-- Lightning-specific payment logic
-- rollup-specific payment logic
 - custodial balances as protocol payment truth
 - staking as a prerequisite for basic posting
 
 Providers may offer convenience flows around that baseline, but publish-plan funding only reaches final settlement when it is backed by a canonical BTC or ETH payment reference that satisfies the provider's published plan rule.
 
 Secondary settlement paths may be standardized later, but they should be treated as extensions rather than launch-critical assumptions.
+
+## Funding Rails
+
+ForYou is BTC/ETH-settled. That does not mean every user action must be funded by an L1 BTC/ETH transaction.
+
+Launch should allow multiple funding rails for plan funding, while keeping the settlement asset limited to BTC or ETH.
+
+Baseline rail definitions:
+
+- BTC L1:
+  a standard Bitcoin on-chain transaction reference
+- BTC Lightning:
+  a Lightning invoice or payment reference accepted by the provider
+- ETH L1:
+  a standard Ethereum on-chain transaction reference
+- ETH L2:
+  a rollup or L2 payment reference accepted by the provider
+
+Launch interoperability `MUST` support BTC L1 and ETH L1 funding proofs for plan funding.
+
+Providers `SHOULD` support at least one lower-fee rail (Lightning or a major ETH L2) if they advertise low annual-plan pricing such as the reference $10/year plan.
+
+If a provider only supports L1 funding, it should publish a minimum funding amount that covers expected L1 fee volatility so users are not surprised by a funding transaction that costs more than the plan.
 
 ## Payment Rationale
 
@@ -56,16 +77,40 @@ The network uses BTC and ETH to support:
 - reduced intermediary control
 - resistance to platform or state pressure through centralized services
 
+## Custody Models
+
+Plan funding and plan usage can be implemented in different custody models. The spec should make these explicit because they change the censorship-resistance properties.
+
+Baseline custody categories:
+
+- Self-custody funding:
+  the user funds a plan directly from a wallet they control, and the provider never holds a long-lived custodial balance on behalf of the user
+- Custodial balance funding:
+  the user deposits funds into a provider-controlled account and the provider debits an internal ledger
+- Assisted self-custody:
+  the user controls keys, but the client or provider offers guided flows for buying, swapping, or routing payments
+
+Launch expectations:
+
+- Providers `MUST` disclose whether a plan is funded by self-custody payments or by custodial balances.
+- Clients `SHOULD` surface that disclosure during plan funding.
+- Censorship-resistance claims are strongest under self-custody funding, and weakest under custodial balances.
+
 ## Baseline Verification Model
 
 Baseline payment flow:
 
 1. a user funds a provider plan using BTC or ETH
-2. a bridge node parses the funding transaction reference for the declared chain
-3. the bridge node verifies transaction existence, amount, recipient, and acceptable confirmation state
+2. a verification path parses the funding reference for the declared chain and rail
+3. the verification path verifies existence, amount, recipient, and acceptable confirmation state
 4. the provider credits the user's plan or allowance after verification
 5. each accepted public network write debits units from that funded plan and returns a provider-signed submission receipt
 6. flow and indexing participants use that receipt during message acceptance
+
+Launch note:
+
+- funding may be performed over different rails, but verification must produce a normalized proof shape
+- once a provider has credited a plan and is issuing receipts or tokens, normal publishing should be low-latency
 
 ## Required Definitions
 
@@ -94,6 +139,12 @@ That schedule should include at least:
 - minimum funding amount
 - recipient reference
 - schedule version or effective time
+- custody model disclosure:
+  self-custody, custodial, or assisted self-custody
+- revenue split disclosure:
+  provider share, network service share, and any reserve share
+- auditability disclosure:
+  where the provider publishes transparency and accounting artifacts for receipts and tokens
 
 Clients should quote this schedule before the user approves funding or publication.
 
@@ -116,12 +167,12 @@ This benchmark is a product target, not immutable protocol truth. Providers may 
 For launch, a funded plan should carry enough payment information for the receiving path to verify:
 
 - declared chain
-- transaction identifier
+- funding reference
 - observed amount
 - intended plan or funding class
 - intended recipient reference
 
-This proof may begin as a client-supplied funding object and be normalized by bridge verification afterward.
+This proof may begin as a client-supplied funding object and be normalized by verification afterward.
 
 ## Submission Receipt Model
 
@@ -158,6 +209,50 @@ A submission token should minimally bind:
 Submission tokens should be actor-scoped and tier-scoped rather than target-scoped. A provider should not need to pre-approve each individual follow target, topic, or recommended post in order for the user to spend a valid Tier 2 capability.
 
 This allows providers to keep abuse controls while removing the synchronous provider bottleneck from every recommend, follow, or subscribe action.
+
+## Receipt and Token Auditability
+
+Provider signatures alone do not prove that a provider is solvent, honest, or correctly metering allowance units.
+
+For launch, the spec should distinguish between:
+
+- local correctness:
+  a message carries a valid provider signature, so the receiving path can verify admission
+- economic auditability:
+  independent parties can verify the provider is not issuing unlimited receipts or tokens beyond funded capacity
+
+Launch should support auditability through:
+
+- published provider plan schedules and recipient references
+- published funding references for each plan class
+- a provider transparency log for issued receipts and tokens
+
+Baseline auditability direction:
+
+- a provider `SHOULD` publish a signed periodic accounting report for each plan class:
+  funded amount, units issued, and remaining budget
+- a provider `SHOULD` publish a signed append-only log root (Merkle or similar) that can prove inclusion of a given receipt or token identifier
+- hosts and clients `MAY` apply stricter trust policies to providers that do not publish auditable accounting artifacts
+
+Launch does not require a full on-chain slashing system, but it should make dishonest providers visible and avoid treating unauditable providers as universally equivalent to auditable ones.
+
+Launch audit artifact example (non-normative):
+
+```json
+{
+  "provider_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
+  "plan_id": "annual-heavy-2026",
+  "window": "2026-03-01",
+  "funding_total": "0.0001",
+  "units_issued": 9000,
+  "units_remaining": 123,
+  "audit_log_root": "b64url-log-root",
+  "audit_log_size": 104857,
+  "signature": "base64-provider-signature"
+}
+```
+
+Receipts and tokens may carry `audit_log_root` and `audit_proof_ref` pointers so independent parties can verify inclusion of a specific `receipt_id` or `token_id` in the provider's published transparency artifacts.
 
 ## Interaction Cost Model
 
@@ -228,17 +323,16 @@ Clients and providers `SHOULD` prefer:
 
 This keeps public lightweight interactions useful without making bot volume equivalent to earned trust.
 
-## Bridge Verification Output
+## Verification Output
 
-A bridge verification result `SHOULD` include:
+A verification result `SHOULD` include:
 
 - `chain`
-- `transaction_id`
-- `verification_status`
+- `funding_reference`
 - `observed_amount`
 - `observed_at`
-- `confirmation_state`
-- `bridge_id`
+- `acceptance_state`
+- `verifier_id`
 
 Optional fields:
 
@@ -252,22 +346,21 @@ Example:
 ```json
 {
   "chain": "bitcoin",
-  "transaction_id": "tx-123",
-  "verification_status": "verified",
+  "funding_reference": "tx-123",
   "observed_amount": "0.0001",
   "observed_at": "2026-03-01T15:00:00Z",
-  "confirmation_state": "provisional",
-  "bridge_id": "bridge-us-east-1",
+  "acceptance_state": "provisional",
+  "verifier_id": "verifier-us-east-1",
   "payment_class": "standard_post"
 }
 ```
 
 ## Acceptance States
 
-- `verified`
-  funding or direct payment meets baseline requirements for message acceptance
 - `provisional`
   funding or direct payment is observed but not yet fully confirmed according to local node policy
+- `verified`
+  funding or direct payment meets baseline requirements for message acceptance
 - `rejected`
   funding, direct payment, or submission receipt is invalid, insufficient, malformed, or otherwise unacceptable
 
@@ -275,7 +368,7 @@ Nodes `SHOULD` make their provisional-versus-final acceptance policy explicit.
 
 ## Recipient Verification Rule
 
-For launch, bridge verification should confirm not only that a funding payment exists, but that it pays an acceptable recipient for the declared plan or payment class.
+For launch, verification should confirm not only that a funding payment exists, but that it pays an acceptable recipient for the declared plan or payment class.
 
 A funded plan should not be treated as valid merely because value moved somewhere on-chain. It must match the provider's published recipient reference and minimum amount for that plan or action.
 
@@ -296,14 +389,13 @@ Additional launch rules:
 
 - Nodes `MAY` require stricter thresholds for higher-value actions.
 - Nodes `MUST` reject transactions that are missing, reverted, malformed, or insufficient in amount.
-- Clients `SHOULD` surface whether a newly funded plan or a direct-payment fallback is still provisional.
+- Clients `SHOULD` surface whether a newly funded plan is still provisional.
 - Once a plan is fully funded and credited, normal message submission should not require users to wait for fresh chain confirmation on every post.
 
 ## Receipt and Funding Reuse Policy
 
 - A funded plan may cover many submissions within its published allowance and duration.
 - A provider-signed submission receipt `MUST NOT` be reused across multiple distinct message submissions.
-- A direct one-time payment fallback `MUST NOT` be reused across multiple distinct message submissions.
 - If receipt reuse or invalid allowance reuse is detected, nodes `SHOULD` reject the later submission.
 
 ## Launch Baseline
@@ -316,8 +408,9 @@ Launch fee model:
 - no direct L1 fallback requirement for individual Tier 2 interactions in the normal UX path
 - no mandatory staking dependency for basic posting
 - BTC and ETH plan funding as the normal launch path
-- direct per-message BTC and ETH settlement only as a fallback path for Tier 1 or other heavier writes
+- no requirement for per-message direct BTC/ETH settlement in the interoperable launch baseline
 - no advertisement fee class in the minimum launch interoperability baseline
+- direct per-message BTC/ETH settlement, if supported at all, should be treated as an optional extension rather than as a user-facing fallback path
 - no default public-interaction quota charge for encrypted private-state sync
 
 The publish fee covers the baseline network function:
@@ -362,6 +455,11 @@ For launch, provider plan revenue should be split conceptually into:
 
 The exact percentages do not need to be frozen in this document yet, but the architecture should assume that publish revenue funds both direct customer-facing service and shared network infrastructure.
 
+Launch disclosure rule:
+
+- if a provider claims participation in shared service buckets, it `MUST` disclose its network service share for the plan class
+- if a provider advertises "network-funded discovery/retrieval" behavior, it `SHOULD` publish settlement reports that show actual payouts or contracts
+
 ## Service Buckets
 
 The network service share should be accounted for by service class rather than by one undifferentiated pool.
@@ -392,6 +490,97 @@ Recommended launch baseline:
 - bucket rewards are distributed after the window closes
 
 This keeps accounting understandable and leaves room for later refinement.
+
+## Distribution Baseline
+
+Launch does not require a single global treasury or a single mandatory payout coordinator.
+
+However, if the spec claims that publish revenue funds read, discovery, verification, and retention work beyond the accepting provider, then it must define how distribution is computed and audited.
+
+Baseline distribution direction:
+
+- each accounting window produces per-bucket work claims
+- work claims are signed by the claiming operator
+- independent auditors or operators may recompute totals from sampled evidence
+- bucket rewards are distributed proportionally to accepted work within the window
+- payout execution may be performed by one or more distributors, but the accounting artifacts should be verifiable independently
+
+Launch requirement target:
+
+- a shared-bucket participant `SHOULD` publish a signed per-window report that includes:
+  window identifier, bucket identifier, operator identifier, work total, and evidence pointers
+- a provider contributing network service share `SHOULD` publish which distributor(s) it uses and how it verifies their reports
+
+This keeps the launch system workable without pretending the full accounting and payout mechanism is already fully decentralized.
+
+## Work-Unit Baseline
+
+For launch, each bucket should use simple work units that can be measured and audited.
+
+Recommended unit direction:
+
+- ingress bucket:
+  count of accepted Tier 1 messages (optionally weighted by size class)
+- discovery bucket:
+  count of candidate items served (optionally weighted by bytes served)
+- retrieval bucket:
+  bytes of verified full-content served
+- retention bucket:
+  retained bytes-days (bytes retained multiplied by days during the window)
+- verification bucket:
+  count of successful plan-funding verifications that resulted in credited plan allowance
+
+These units are not perfect, but they are more auditable than subjective metrics such as popularity or AI quality.
+
+## Work-Claim Report Example
+
+Launch work-claim reports should be signed and should include evidence pointers.
+
+Example (non-normative):
+
+```json
+{
+  "window": "2026-03-01",
+  "bucket_id": "retrieval",
+  "operator_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
+  "work_units": 987654321,
+  "unit_kind": "bytes_served",
+  "evidence": {
+    "log_root": "b64url-log-root",
+    "log_ref": "ipfs://bafyexample"
+  },
+  "signature": "base64-operator-signature"
+}
+```
+
+## Payout Settlement Report Example
+
+If a provider or distributor claims that publish revenue funded shared service work, it should publish a signed settlement report that points to concrete payouts.
+
+Example (non-normative):
+
+```json
+{
+  "window": "2026-03-01",
+  "payer_id": "did:key:z6Mkq7Yf6m5hC2NX1LKcKD5Vac7wHxZ34rnKTtwe8QwMmpjD",
+  "chain": "bitcoin",
+  "payout_reference": "tx-456",
+  "total_paid": "0.0025",
+  "payouts": [
+    {
+      "bucket_id": "discovery",
+      "operator_id": "did:key:z6Mk...discovery",
+      "amount": "0.0007"
+    },
+    {
+      "bucket_id": "retrieval",
+      "operator_id": "did:key:z6Mk...retrieval",
+      "amount": "0.0018"
+    }
+  ],
+  "signature": "base64-payer-signature"
+}
+```
 
 ## Rewardable Work Rule
 
@@ -432,7 +621,7 @@ For launch, the accepting provider is the baseline fee recipient.
 
 That provider may:
 
-- run the bridge, relay, index, and storage functions directly
+- run the verification, relay, index, and storage functions directly
 - subcontract those functions operationally
 - share revenue with other operators outside the protocol
 
@@ -442,8 +631,8 @@ Launch should not require trustless multi-party fee splitting in order to publis
 
 For launch:
 
-- a client may retry submission of the same `message_id` using the same submission receipt or direct-payment fallback reference when the earlier attempt did not result in acceptance
-- a one-time receipt or one-time payment fallback must not be reused for a different `message_id`
+- a client may retry submission of the same `message_id` using the same submission receipt when the earlier attempt did not result in acceptance
+- a one-time receipt must not be reused for a different `message_id`
 - failed or abandoned submissions do not imply an automatic on-chain refund
 - providers may define customer-service refund policies, but those policies are outside the protocol unless later standardized
 

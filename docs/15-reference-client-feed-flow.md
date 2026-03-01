@@ -22,10 +22,10 @@ The client should preserve that simplicity even though the underlying system inc
 A reference client should support a clean publishing flow:
 
 1. write the post
-2. show the required allowance impact or direct-payment fallback cost
+2. show the required allowance impact for the action
 3. approve one publish action
 4. submit to the network
-5. show `pending`, `provisionally published`, or `published`
+5. show `pending` or `published`
 
 Readers do not need to share the publisher's client, preferences, or ranking model to discover the post.
 
@@ -53,16 +53,16 @@ The client:
 
 The client:
 
-- shows the plan impact, remaining allowance, or fallback cost required for the action
+- shows the plan impact and remaining allowance required for the action
 - asks the user to approve a single publish action
-- handles signing and receipt attachment or fallback payment as part of that publish action
+- handles signing and receipt attachment as part of that publish action
 
 ### Stage P3: Submit and Track
 
 The client:
 
-- submits the signed message and submission receipt or direct-payment fallback reference
-- tracks acceptance state from `pending` to `provisionally published` to `published`
+- submits the signed message and the applicable submission receipt or submission token
+- tracks acceptance state from `pending` to `published`
 - explains failures in user language rather than protocol jargon
 
 ### Publishing Reference Sequence
@@ -71,8 +71,8 @@ The client:
 1. user -> client: write post
 2. client -> user: show fee and publish action
 3. user -> client: approve publish action
-4. client -> network path: submit signed message + submission receipt or direct-payment fallback reference
-5. bridge/flow path -> client: pending or provisionally published status
+4. client -> network path: submit signed message + submission receipt
+5. provider/flow path -> client: pending or published status
 6. network path -> client: published status
 ```
 
@@ -81,14 +81,13 @@ The client:
 Example state progression:
 
 ```text
-Draft -> Pending -> Provisionally Published -> Published
+Draft -> Pending -> Published
 ```
 
 Example user copy:
 
 ```text
 Pending: Your publish request was sent.
-Provisionally Published: Your post is visible to the network, pending stronger payment confirmation.
 Published: Your post is fully accepted.
 ```
 

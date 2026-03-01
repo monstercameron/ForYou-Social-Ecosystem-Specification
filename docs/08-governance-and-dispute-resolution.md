@@ -38,6 +38,8 @@ Governance should not be treated as:
 - a universal moderation authority
 - a mechanism for controlling what every compliant client must show readers
 
+Governance does need to be strong enough to prevent ecosystem fragmentation on basic interoperability surfaces.
+
 ## Launch Governance Process
 
 For launch, governance should use a simple published-process model:
@@ -48,6 +50,19 @@ For launch, governance should use a simple published-process model:
 - interoperability depends on shared adoption, not on coercive central control
 
 This keeps governance real enough to coordinate the network without pretending there is already a mature constitutional system in place.
+
+## Interoperability Profile Rule
+
+To avoid a Nostr-style fragmented "pick your own subset" ecosystem, launch should define a small number of explicit interoperability profiles.
+
+Baseline rule:
+
+- there `MUST` be one "Launch Baseline Profile" that defines:
+  required message types, required API surfaces, and required validation rules
+- public providers and public hosts that claim compatibility `MUST` implement the Launch Baseline Profile
+- optional features must be declared as extensions rather than silently diverging
+
+This does not require coercive governance. It requires clarity and conformance.
 
 ## Versioning and Proposal Lifecycle
 
@@ -73,6 +88,11 @@ A launch governance decision should be treated as operationally active when:
 
 Compatibility statements should be tied to published version numbers rather than to vague claims of being "current."
 
+Launch adoption should also be tied to interoperability profiles:
+
+- if an implementation claims "Launch Baseline Profile" support, it must pass the profile's validation and endpoint requirements
+- if an implementation does not support the baseline, it should declare which profile or extension set it supports
+
 ## Required Decisions
 
 - Membership rule:
@@ -92,6 +112,20 @@ For launch:
 - an operator dispute is a disagreement about local hosting, relay, pricing, retention, or policy choices that do not redefine protocol validity for everyone else
 - emergency guidance may be published quickly during attacks or legal emergencies, but it remains advisory until implementations adopt it
 
+## Emergency Coordination
+
+Launch needs a faster coordination path than "wait for everyone to notice the README changed."
+
+Baseline emergency direction:
+
+- governance maintainers `SHOULD` publish signed emergency advisories with:
+  identifier, affected versions, severity, and recommended mitigations
+- hosts, providers, and clients `SHOULD` support an "emergency safe mode" where they can:
+  disable a specific optional extension, reject a specific malformed pattern, or apply stricter validation temporarily
+- implementations remain autonomous, but signed advisories reduce time-to-coordination during active exploitation
+
+Governance should not be a universal moderation authority, but it can still publish security and interoperability emergency guidance that operators can adopt quickly.
+
 ## Launch Dispute Baseline
 
 For launch:
@@ -99,6 +133,11 @@ For launch:
 - protocol disputes should be resolved through published clarifications or versioned spec updates
 - operator disputes should remain local unless they affect interoperability
 - emergency guidance may be published quickly, but it is advisory until adopted by implementations
+
+Launch note:
+
+- Some legal or safety issues may require coordinated operator action (for example, severe-illegal content refusal).
+- The protocol should not pretend it can guarantee global enforcement, but it should make room for fast coordination and shared denylist ingestion where legally appropriate.
 
 ## Open Decisions
 

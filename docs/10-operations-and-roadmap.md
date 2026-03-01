@@ -28,10 +28,10 @@ For launch, operations should focus on the minimum behaviors needed to keep the 
 
 - reliable publish acceptance
 - redundant metadata propagation
-- sufficient bridge availability for BTC and ETH verification
+- sufficient verification capability for BTC and ETH plan funding
 - enough retained storage to keep recent and important content retrievable
 - multiple provider paths for discovery and old-content recovery
-- clear operator visibility into peer health, backlog, and payment-verification failures
+- clear operator visibility into peer health, backlog, and funding-verification failures
 - no single public operator becoming a practical dependency for normal network use
 
 ## Shared-Service Accounting Support
@@ -44,7 +44,7 @@ Launch-support expectations should include:
 - discovery providers can report valid candidate responses served
 - retrieval providers can report successful content responses served
 - retained providers can report committed retention classes and auditable availability
-- bridge or verification providers can report valid funding verifications and receipt issuance volume
+- verification providers can report valid funding verifications and receipt issuance volume
 
 These reports should be auditable and should avoid rewarding obvious self-generated loops.
 
@@ -55,7 +55,7 @@ An operator participating in the launch network should be able to:
 - persist host identity and configuration across restarts
 - maintain bootstrap peers and refresh peer knowledge over time
 - relay accepted metadata to at least one additional peer path
-- either perform bridge verification or consume normalized bridge results reliably
+- either perform funding verification locally or consume normalized verification results reliably
 - serve the metadata, content, or discovery role it advertises
 - surface explicit miss or failure states instead of silent timeouts where practical
 
@@ -77,6 +77,7 @@ At launch, public operator targets should be measured in a simple, inspectable w
 - publish-path availability means the operator accepts a valid submission request and returns an explicit success or explicit failure state
 - metadata or discovery availability means the advertised API responds with a parseable success or explicit miss state rather than timing out
 - the 60-second propagation target should be interpreted as a best-effort launch SLO for at least 95% of accepted messages under non-degraded conditions
+  and should be measured as successful gossip into at least one peer path or index path, not as global delivery
 
 Operators should not advertise a target they do not actively measure.
 

@@ -22,6 +22,22 @@ This document covers:
 - ForYou App:
   unified cross-platform client
 
+## ForYou Pulse Baseline
+
+ForYou Pulse is the explicit discovery surface intended to solve:
+
+- cold start for new users
+- "what is happening now" browsing
+- exploration outside the user's follow graph
+
+Launch baseline expectations:
+
+- Pulse `SHOULD` be clearly labeled as a discovery surface, not as the user's private ranking profile.
+- Pulse `SHOULD` be built from broad candidate modes (recent and/or random sample) across multiple providers when available.
+- Pulse `MUST` respect the reader's local filters (mute, block, hide, sensitivity settings), even when the candidate source is remote.
+- Pulse `SHOULD` display the provider sources used to generate the candidate set so users can reason about possible bias or gaps.
+- Pulse `MUST NOT` require a single mandatory provider or a single mandatory ranking service.
+
 ## Client Responsibilities
 
 - compose and submit messages
@@ -59,7 +75,7 @@ For launch, the clean publishing journey is:
 6. approve the publish action
 7. let the client handle signing and receipt attachment
 8. submit to the network
-9. receive clear status: `pending`, `provisionally published`, or `published`
+9. receive clear status: `pending` or `published`
 
 ## Reader Journey
 
@@ -162,7 +178,7 @@ Clients should make this model obvious:
 - Clients `SHOULD` show the estimated posting cost before submission.
 - Clients `SHOULD` show remaining allowance or unit impact when a plan-backed publish is the normal path.
 - Clients `SHOULD` make plan-funded publication feel like one publish action from the user's perspective.
-- Clients `MUST` distinguish between `pending`, `provisionally published`, and `published`.
+- Clients `MUST` distinguish between `pending` and `published`.
 - Clients `SHOULD` explain that network publication does not guarantee distribution into every reader's feed.
 - Clients `MUST NOT` imply that the client operator centrally controls what the entire network can publish.
 - Clients `SHOULD` make room for later fee changes, richer content types, and additional publishing options without changing the basic publish flow.
@@ -178,14 +194,16 @@ A conforming launch client should be able to:
 - compose and submit a standard post
 - compose and submit a reply
 - render and submit supported public interaction types
-- quote the current publish plan, allowance impact, or direct-payment fallback cost before submission
-- sign the message and attach the applicable submission receipt, submission token, or direct-payment fallback reference
-- display `pending`, `provisionally published`, and `published`
+- quote the current publish plan and allowance impact before submission
+- sign the message and attach the applicable submission receipt or submission token
+- display `pending` and `published`
 - fetch candidate metadata from at least one provider path
 - rank locally when feasible or fall back gracefully when local ranking is unavailable
 - retrieve full content by `content_address`
 - let the user use public follow actions separately from private trust-source preferences
 - preserve or sync private curation state across the user's own devices through export, import, encrypted sync, or equivalent portable state handling
+- display user identities using human-friendly handles when available, while always retaining the canonical `author_id`
+- display a short fingerprint of `author_id` alongside aliases to reduce impersonation risk
 - avoid presenting raw recommendation or follow volume as authoritative popularity truth
 - render target-unavailable or target-withdrawn states explicitly for quotes, counterpoints, replies, and recommendations
 
@@ -201,10 +219,9 @@ Example user-facing flow:
   `This will publish your post using your current provider plan. What readers see depends on their own client, filters, and ranking settings.`
 - status sequence:
   `Pending`
-  `Provisionally published`
   `Published`
 - failure copy:
-  `Publish failed. Check plan status, allowance, or fallback payment status and try again.`
+  `Publish failed. Check plan status or allowance and try again.`
 
 ## Launch Questions
 

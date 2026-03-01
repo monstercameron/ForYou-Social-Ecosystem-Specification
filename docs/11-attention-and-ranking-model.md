@@ -21,6 +21,14 @@ ForYou separates publishing from ranking:
 - ranking is local by default
 - users may choose local or third-party ranking systems
 
+Local-first does not mean "every phone runs a multi-gigabyte model over the global firehose."
+
+For launch, local-first primarily means:
+
+- the user's preference state, filters, trust lists, and objectives are controlled by the user
+- the user can swap clients and models without losing their attention policy
+- ranking execution may be local, remote, or hybrid depending on device constraints, but must remain user-controlled and replaceable
+
 ## Scope
 
 This document covers:

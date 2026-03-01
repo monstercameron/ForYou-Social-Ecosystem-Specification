@@ -20,7 +20,7 @@ The current design assumes a layered system:
 - Message layer:
   users create signed protocol messages
 - Submission-funding layer:
-  messages reference valid funding evidence through submission receipts or direct-payment fallback
+  messages reference valid funding evidence through provider-issued receipts or tokens
 - Metadata layer:
   searchable metadata is distributed across the network
 - Content storage layer:
@@ -59,13 +59,13 @@ The network should degrade gracefully under blocking, censorship, outages, or re
 The baseline write path is:
 
 1. client constructs a canonical message envelope and typed payload
-2. client signs the message using the author's identity key
-3. client attaches either a provider submission receipt or a direct-payment fallback reference for any portable public message
-4. bridge infrastructure verifies any referenced direct funding or direct-payment fallback transaction
-5. flow nodes validate message shape, identity, signature, and submission funding status
-6. accepted metadata is propagated to index providers and flow peers
-7. referenced full content is stored or pinned by storage-capable participants
-8. storage-capable participants retain accepted content and metadata according to network policy and local capacity
+2. client signs the message using the declared signing key (either `author_id` or a delegated `signer_id`)
+3. client attaches provider admission evidence for any portable public message:
+   a submission receipt for Tier 1, or a submission token/receipt for Tier 2
+4. flow nodes validate message shape, identity, signature, and submission funding status
+5. accepted metadata is propagated to index providers and flow peers
+6. referenced full content is stored or pinned by storage-capable participants
+7. storage-capable participants retain accepted content and metadata according to network policy and local capacity
 
 ## Acceptance Rule
 
@@ -74,18 +74,18 @@ A message is considered accepted into the baseline network path when all of the 
 - the message schema is valid
 - the signature verifies against `author_id`
 - the message type is supported
-- required submission funding has been satisfied through either a valid submission receipt or a valid direct-payment fallback
+- required submission funding has been satisfied through valid provider admission evidence for the message tier
 - referenced content address is present when required by the message type
 
 Indexing and ranking do not determine validity. They happen after acceptance.
 
-For launch, `valid enough for provisional acceptance` means the direct funding or direct-payment fallback meets the launch confirmation policy, or the submission receipt chains back to a sufficiently funded plan under provider policy.
+For launch, `valid enough for acceptance` means the provider-issued admission evidence is valid for the message tier under the provider's published plan rules.
 
 ## Canonical Record
 
 The canonical record of message existence is the accepted signed message envelope plus its typed payload and any required verified submission funding evidence.
 
-BTC or ETH settlement proves plan funding or fallback fee settlement. It is not the canonical store of social content metadata.
+BTC or ETH settlement proves plan funding. It is not the canonical store of social content metadata.
 
 For launch, the protocol should not require application metadata to be written on-chain.
 
@@ -145,7 +145,7 @@ Detailed host-hint behavior belongs in the storage document. Canonical endpoint 
 
 - Nodes `MUST` reject duplicate `message_id` values already accepted in the same validity domain.
 - Nodes `MUST` reject messages whose signatures do not match their canonical serialization.
-- Nodes `SHOULD` reject replayed submission receipts or replayed direct-payment fallback references when they are intended for one-time settlement.
+- Nodes `SHOULD` reject replayed submission receipts when they are intended for one-time settlement.
 
 ## Target-State Rule
 

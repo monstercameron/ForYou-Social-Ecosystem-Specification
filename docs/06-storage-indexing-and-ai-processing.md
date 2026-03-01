@@ -44,6 +44,35 @@ This supports broad discovery without requiring every host to mirror every full 
 
 This document focuses on network data behavior. Client sequencing and user-facing feed behavior are defined in the reference client flow document.
 
+## Launch Content-Address Scheme
+
+For launch interoperability, `content_address` should use IPFS CIDv1 addressing:
+
+```text
+ipfs://<cidv1>
+```
+
+Retention-capable participants must treat "retention" as "pinning or equivalent durable storage." If content is not pinned, garbage collection or eviction will produce broken retrieval even if metadata remains.
+
+## Metadata Propagation Protocol Class
+
+The spec must not rely on the phrase "metadata spreads broadly" without describing how.
+
+For launch, the intended protocol class is:
+
+- epidemic gossip for recent metadata:
+  new accepted metadata is pushed to a bounded fanout of peers
+- periodic anti-entropy:
+  peers exchange inventories and request missing ranges or chunks to repair gaps
+- deduplication by `message_id`:
+  replayed or already-seen items are dropped
+
+This is not a single fixed wire protocol yet, but implementations should converge on:
+
+- bounded fanout rather than global flood
+- time-bucketed or cursor-based inventories rather than per-item polling
+- recovery by inventory reconciliation rather than assuming perfect delivery
+
 ## Scaling Model
 
 ForYou should scale by separating lightweight discovery from heavier content retrieval.
@@ -149,7 +178,7 @@ Two provider capability levels should be recognized:
 The default retained-provider floor is:
 
 - accepted metadata remains discoverable through that provider for at least 365 days
-- accepted full content remains retrievable through that provider for at least 180 days unless local law or explicit policy prevents continued serving
+- accepted full content remains retrievable through that provider for at least 180 days unless local law, valid takedown obligations, or explicit policy prevents continued serving
 
 These are provider-level commitments, not a requirement that every host store every object for the full period.
 
