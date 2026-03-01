@@ -46,13 +46,18 @@ This document focuses on network data behavior. Client sequencing and user-facin
 
 ## Launch Content-Address Scheme
 
-For launch interoperability, `content_address` should use IPFS CIDv1 addressing:
+For launch interoperability, `content_address` `MUST` use IPFS CIDv1 addressing:
 
 ```text
 ipfs://<cidv1>
 ```
 
 Retention-capable participants must treat "retention" as "pinning or equivalent durable storage." If content is not pinned, garbage collection or eviction will produce broken retrieval even if metadata remains.
+
+Extension note:
+
+- future revisions may standardize additional content-address schemes
+- launch interoperability requires IPFS CIDv1 so clients can verify content consistently across hosts
 
 ## Metadata Propagation Protocol Class
 

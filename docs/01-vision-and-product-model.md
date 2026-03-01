@@ -159,7 +159,7 @@ User-owned ranking only works long term if private curation can survive device l
   `mute`, `hide`, `block`, `bookmark`, `trust_source`, `boost`, `downrank`, `private_tag`, `private_note`
 - Extension curation:
   `add_to_list`, `add_to_collection`, `pin_to_profile`, `add_to_reading_queue`
-- Extension action:
+- Economic extension (out of launch scope):
   `tip`, `bounty`
 
 Launch note:
@@ -270,9 +270,12 @@ private_note        private curation  private portable (encrypted)   none
 
 Extension note:
 
-- Extension actions such as `tip`, `bounty`, `add_to_list`, `add_to_collection`, `pin_to_profile`, and `add_to_reading_queue`
-  are not standardized as interoperable protocol messages at launch.
-  Clients may still implement them privately (for example in encrypted private portable state), but they should not assume cross-client interoperability until the protocol defines them.
+- Extension actions such as `add_to_list`, `add_to_collection`, `pin_to_profile`, and `add_to_reading_queue`
+  are not standardized as interoperable public protocol messages at launch.
+  They may still be implemented as encrypted private portable state using additional `private_state_update.state_kind` values such as:
+  `source_lists.v1`, `collections.v1`, `reading_queue.v1`, and `profile_pins.v1`.
+- Economic extensions such as `tip` and `bounty` are explicitly out of the launch baseline and require additional payment and settlement design.
+  Clients should not assume interoperable network support for them until a separate extension spec is defined.
 
 ## Launch Interaction Direction
 
@@ -300,7 +303,8 @@ At launch, private curation interactions should use encrypted portable state whe
 - private_tag
 - private_note
 
-Tip, bounty, list, collection, reading queue, and profile pinning are strong extension candidates, but they do not need to block the baseline launch interaction model.
+List, collection, reading queue, and profile pinning are strong extension candidates and can live in encrypted private portable state.
+Tip and bounty are also strong extension candidates, but they require additional economic semantics and should not block the baseline launch interaction model.
 
 Launch ranking and discovery should not treat raw Tier 2 interaction volume as a high-trust global signal. Those interactions are useful as weak context, trust-weighted input, and reader-local evidence rather than as universal popularity truth.
 

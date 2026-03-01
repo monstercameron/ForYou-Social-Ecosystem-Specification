@@ -392,6 +392,21 @@ Additional launch rules:
 - Clients `SHOULD` surface whether a newly funded plan is still provisional.
 - Once a plan is fully funded and credited, normal message submission should not require users to wait for fresh chain confirmation on every post.
 
+## Verification Resilience
+
+ForYou should not depend on one mandatory payment-verification chokepoint.
+
+Launch resilience rules:
+
+- there is no single global bridge
+- verification is a role:
+  an accepting provider may verify BTC/ETH funding using its own infrastructure, or may consume verification artifacts from multiple verifiers
+- if one verifier is down, providers `SHOULD` be able to fail over to another verifier or to local verification
+- if a provider cannot verify new plan funding, it `MUST` not issue new allowance credits or receipts for that unfunded plan
+- existing already-credited plans should continue working even if verification is temporarily unavailable
+- clients `SHOULD` treat "plan funding pending verification" as a recoverable state:
+  queue the funding, show clear status, or choose a different provider rather than treating the network as down
+
 ## Receipt and Funding Reuse Policy
 
 - A funded plan may cover many submissions within its published allowance and duration.

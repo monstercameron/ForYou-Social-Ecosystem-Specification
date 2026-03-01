@@ -11,7 +11,9 @@ The current material describes a paid publishing network with user-controlled re
 At a high level:
 
 - anyone can publish through any compatible client
-- publishing requires funded access through a provider plan or a direct-payment fallback
+- publishing requires funded access through a provider plan
+- providers issue admission evidence for each portable public message:
+  submission receipts for Tier 1 writes and submission tokens for Tier 2 lightweight interactions
 - the network accepts valid posts
 - each reader decides what they see through their own client, filters, and ranking
 

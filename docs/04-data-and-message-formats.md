@@ -728,7 +728,95 @@ This plaintext `v` is distinct from `encrypted_state.v`, which versions the encr
 
 Extension note:
 
-- Additional private-state kinds such as lists, collections, reading queues, or profile pins may be represented as new `state_kind` values (for example `collections.v1`), but they are not part of the minimum interoperable launch baseline unless specified elsewhere.
+- The launch baseline only requires `curation.v1`.
+- Additional private-state kinds may be represented as new `state_kind` values inside encrypted `private_state_update` messages.
+  These are optional and not required for launch interoperability, but they provide a spec home for common curation features.
+
+#### Extension Private-State Kinds (Optional)
+
+These `state_kind` values are intended for encrypted private portable state, not public discovery metadata.
+
+`source_lists.v1` (sources grouped into named lists):
+
+- plaintext `MUST` be a JSON object with `v: 1`
+- `lists` `MUST` be a list of list objects
+- each list object `MUST` include:
+  `list_id`, `title`, and `author_ids`
+
+Example plaintext:
+
+```json
+{
+  "v": 1,
+  "lists": [
+    {
+      "list_id": "lst-001",
+      "title": "Distributed Systems People",
+      "author_ids": ["did:key:z6Mk...a", "did:key:z6Mk...b"]
+    }
+  ]
+}
+```
+
+`collections.v1` (messages grouped into named collections):
+
+- plaintext `MUST` be a JSON object with `v: 1`
+- `collections` `MUST` be a list of collection objects
+- each collection object `MUST` include:
+  `collection_id`, `title`, and `message_ids`
+
+Example plaintext:
+
+```json
+{
+  "v": 1,
+  "collections": [
+    {
+      "collection_id": "col-001",
+      "title": "Good Threads",
+      "message_ids": ["msg-123", "msg-456"]
+    }
+  ]
+}
+```
+
+`reading_queue.v1` (ordered queue of messages):
+
+- plaintext `MUST` be a JSON object with `v: 1`
+- `queue` `MUST` be a list of queue items
+- each queue item `MUST` include:
+  `message_id`
+
+Example plaintext:
+
+```json
+{
+  "v": 1,
+  "queue": [
+    { "message_id": "msg-123" },
+    { "message_id": "msg-456" }
+  ]
+}
+```
+
+`profile_pins.v1` (pinned items for a client-visible profile surface):
+
+- plaintext `MUST` be a JSON object with `v: 1`
+- `pinned_message_ids` `MUST` be a list of message identifiers
+
+Example plaintext:
+
+```json
+{
+  "v": 1,
+  "pinned_message_ids": ["msg-123", "msg-456"]
+}
+```
+
+Note:
+
+- These pins are private portable state by default.
+  A future revision may define a public profile-pin message type, but launch should not assume global profile pin interoperability.
 
 Example `private_state_update` payload:
 
