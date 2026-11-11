@@ -15,7 +15,7 @@ Requirement language is defined [below](#normative-language). A role-specific re
 | Status | Documents |
 | --- | --- |
 | Normative core | The repository [README](../README.md), documents 01 through 07, document 09, the [API catalog](./API-catalog.md) and the [schemas](../schemas/launch.schema.json) |
-| Optional profile | [Owner export profile](./10-owner-export-profile.md); normative only for an implementation that claims it |
+| Optional profile | [Owner export profile](./10-owner-export-profile.md) and [display names profile](./12-display-names-profile.md); each is normative only for an implementation that claims it |
 | Nonnormative | [Operator guide](./08-operator-guide.md), [operator compliance guide](./11-operator-compliance-guide.md), reviews, examples and tests |
 
 Each topic has one owning document. A cross-reference incorporates the owner's rule and never overrides it. Schema structure and prose semantics MUST both hold. A contradiction is a defect that blocks a conformance claim on the affected point. Nonnormative documents never override the normative core.
@@ -33,12 +33,13 @@ Each topic has one owning document. A cross-reference incorporates the owner's r
 | [09 Quality](./09-quality.md) | Quality evidence: observations, signed reports and their limits |
 | [10 Owner export profile](./10-owner-export-profile.md) | Optional export archive format, multipart rules and export encryption |
 | [11 Operator compliance guide](./11-operator-compliance-guide.md) | Nonnormative intake, case management, per-market checklists, incident handling and funding disputes |
+| [12 Display names profile](./12-display-names-profile.md) | Optional signed display name records, their routes and the client rules for showing names and following keys |
 | [API catalog](./API-catalog.md) | Route and status reference; the owning documents define the requirements |
 
 ## Machine-readable contracts
 
 - [Launch schema](../schemas/launch.schema.json): the root TransportMessage and the named message, admission, delegation, key-succession and listing definitions.
-- [Operations schema](../schemas/operations.schema.json): a library of service definitions. A consumer MUST validate against the intended named definition, never against the library root.
+- [Operations schema](../schemas/operations.schema.json): a library of service definitions, including the optional export and display names objects. A consumer MUST validate against the intended named definition, never against the library root.
 - [Tests](../tests/README.md): executable vectors, schema checks and reference-model regressions. They are not a complete implementation.
 
 ## Release status and license
@@ -56,4 +57,4 @@ MUST, MUST NOT, SHOULD, SHOULD NOT and MAY are used as in RFC 2119 and RFC 8174 
 
 A lowercase "may" states a possibility, not a permission. Nonnormative documents use requirement keywords only inside an optional profile, where they bind an implementation that offers that profile.
 
-Optional profiles: [owner export](./10-owner-export-profile.md), and the [bounded intake and recovery](./11-operator-compliance-guide.md#bounded-intake-and-recovery) section of the operator compliance guide. The rest of that guide is nonnormative advice.
+Optional profiles: [owner export](./10-owner-export-profile.md), [display names](./12-display-names-profile.md), and the [bounded intake and recovery](./11-operator-compliance-guide.md#bounded-intake-and-recovery) section of the operator compliance guide. The rest of that guide is nonnormative advice.

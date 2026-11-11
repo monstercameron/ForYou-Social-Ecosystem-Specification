@@ -119,7 +119,7 @@ If the Foundation is unavailable, settlement is unaffected: it is decided by the
 | Specification release | 1.0 | The frozen document, schema and vector set |
 | Wire message version | `{major:2, minor:0}` | Signed in every message; selects schema and verifier |
 | Signing prefix | `ForYou/1/` | Domain-separation prefix for signatures |
-| ID prefixes | `fy1:`, `fyd1:`, `fye1:`, `fyfs2:`, `fysc2:`, `fyrd2:`, `fyks2:` and others | Opaque type tags; they do not track the release or wire version |
+| ID prefixes | `fy1:`, `fyd1:`, `fye1:`, `fyfs2:`, `fysc2:`, `fyrd2:`, `fyks2:`, `fynr2:` and others, as listed in [the protocol](./02-protocol.md#scope-and-compatibility) | Opaque type tags; they do not track the release or wire version |
 | Fee schedule | `schedule_id` | Immutable identity of one approved schedule |
 
 These identifiers are independent. A release MUST NOT rename an existing identifier, label or route.

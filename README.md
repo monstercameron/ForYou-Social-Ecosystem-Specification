@@ -6,7 +6,7 @@ ForYou defines publicly downloadable signed text messages. Each record pays a sp
 
 **Retention.** Each provider declares its retention period, with a minimum of one year. The ForYou Foundation funds and owns a Lifetime Vault that retains every delivered record with no scheduled expiry. This is an obligation of the Foundation, not a guarantee that any operator survives or can lawfully serve every record forever.
 
-**Reading.** Anyone can download retained public records without a reader account, wallet signature or reader purchase. Explicit availability, rate and legal limits apply. Apps verify the records and build their own threads, feeds or other experiences. Likes, favorites, follows, profiles, ranking and private preference sync are not core protocol state.
+**Reading.** Anyone can download retained public records without a reader account, wallet signature or reader purchase. Explicit availability, rate and legal limits apply. Apps verify the records and build their own threads, feeds or other experiences. Likes, favorites, follows, profiles, ranking and private preference sync are not core protocol state. An optional [display names profile](./docs/12-display-names-profile.md) lets an author sign a non-unique name for their key; follows stay in the client.
 
 **Paying for a post.** Publishers fund a balance with their chosen provider in Bitcoin or Ethereum. They then authorize a separate debit for each post. The balance is an accounting claim on that provider, not a transferable protocol token or a portable network balance. A provider's failure or insolvency may put the balance at risk. Funding and withdrawal network fees are separate.
 
@@ -32,6 +32,7 @@ The Foundation keeps the rest for the vault and the monitor committee. There is 
 | Provider quality evidence | [Quality](./docs/09-quality.md) |
 | Optional owner export profile | [Owner export](./docs/10-owner-export-profile.md) |
 | Nonnormative operator compliance guidance | [Compliance guide](./docs/11-operator-compliance-guide.md) |
+| Optional signed display names | [Display names](./docs/12-display-names-profile.md) |
 | Route and error index | [API catalog](./docs/API-catalog.md) |
 
 The [documentation index](./docs/README.md) defines ownership. [Launch schemas](./schemas/launch.schema.json) and [operations schemas](./schemas/operations.schema.json) define structural contracts; semantic checks and signatures remain mandatory. See [test instructions](./tests/README.md). Review records describe historical snapshots and never override current normative documents.

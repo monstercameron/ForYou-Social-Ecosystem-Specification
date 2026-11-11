@@ -14,7 +14,7 @@ This document defines the wire and security profile of specification release 1.0
 | Specification release | 1.0 | The frozen set of documents and schemas |
 | Message `version` | `{ "major": 2, "minor": 0 }` | Wire format of signed messages; the only supported value |
 | Signing prefix | `ForYou/1/` | Domain-separation prefix; stable across wire versions |
-| ID prefixes | `fy1:`, `fyd1:`, `fye1:`, `fyfs2:`, `fydi2:`, `fydc2:`, `fyfq2:`, `fyqr2:`, `fydp2:`, `fyds2:`, `fyrd2:`, `fyks2:`, `fyfc2:`, `fysc2:`, `fyku2:` | Opaque type tags; the digit is part of the tag and does not track the release or wire version |
+| ID prefixes | `fy1:`, `fyd1:`, `fye1:`, `fyfs2:`, `fydi2:`, `fydc2:`, `fyfq2:`, `fyqr2:`, `fydp2:`, `fyds2:`, `fyrd2:`, `fyks2:`, `fyfc2:`, `fysc2:`, `fyku2:`, `fynr2:` (optional [display names profile](./12-display-names-profile.md)) | Opaque type tags; the digit is part of the tag and does not track the release or wire version |
 
 All signed objects are closed: an unknown field is rejected. Adding a field therefore requires a new minor version.
 
@@ -23,7 +23,7 @@ Baseline message scope:
 - The only baseline public message type is post.
 - Each post requires a bound receipt.
 - A comment is a post carrying optional reply_to; it purchases the same service as another post.
-- Likes/recommendations, favorites, follows, subscriptions, profiles, ranking, polls and app preference sync have no core message types or endpoints.
+- Likes/recommendations, favorites, follows, subscriptions, profiles, ranking, polls and app preference sync have no core message types or endpoints. The optional [display names profile](./12-display-names-profile.md) defines a signed name record that is not a message.
 - Unfinished submissions and owner-only export records never enter public listing/download.
 
 ## Bytes, keys and signatures

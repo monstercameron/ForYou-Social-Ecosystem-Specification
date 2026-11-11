@@ -85,6 +85,16 @@ A provider is conformant without these routes. A provider that offers owner expo
 | `GET /v1/exports/{job_id}/parts/{part_number}/{offset}` | Owner-authenticated bounded part chunk. | [Export transport](./10-owner-export-profile.md#owner-export-transport) |
 | `GET /v1/exports/{job_id}/files/{part_number}/{entry_number}/{offset}` | Owner-authenticated bounded data-file chunk. | [Export transport](./10-owner-export-profile.md#owner-export-transport) |
 
+## Optional display names
+
+A provider or replica is conformant without these routes. A holder that offers them follows the [display names profile](./12-display-names-profile.md). Reads need no account. A name is a label signed by a key, never a unique or verified identity.
+
+| Route | Scope | Authority |
+| --- | --- | --- |
+| `POST /v1/names` | Publish a self-authenticating `NameRecord`; free. 201 when it becomes current, 200 for the identical current record, 409 `stale_state`, 409 `not_ready` without an accepted post of that author, 422 `invalid_message`, 429 `rate_limited`. | [Publish](./12-display-names-profile.md#publish) |
+| `GET /v1/names/{author_id}` | The holder's current `NameRecord` for that author, including a withdrawn (null) name, or 404 `not_found`. | [Read one author](./12-display-names-profile.md#read-one-author) |
+| `GET /v1/names?display_name={name}` | Advisory lookup after NFC and simple case folding; a `NamesPage` of at most 50 candidates from this holder only, never a uniqueness claim. | [Look up by name](./12-display-names-profile.md#look-up-by-name) |
+
 ## Reserved rights-intake routes
 
 These route names are reserved and OPTIONAL in core. Their procedure is described in the nonnormative [operator compliance guide](./11-operator-compliance-guide.md#bounded-intake-and-recovery).

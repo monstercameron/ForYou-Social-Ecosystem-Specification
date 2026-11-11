@@ -36,7 +36,7 @@ Every rule in this specification serves one of these goals. A change that works 
   - There is no protocol token, global feed, handle registry or moderation authority.
 - Messages are immutable signed records. An update is a new, separately signed and paid post. It does not change or erase earlier versions.
 - Public download does not mean unlimited bandwidth or exemption from safety and legal limits. Failures and restrictions MUST be explicit.
-- Likes, favorites, follows, bookmarks, profiles, feeds, ranking, notifications, private groups and private preference sync are application features outside this core specification.
+- Likes, favorites, follows, bookmarks, profiles, feeds, ranking, notifications, private groups and private preference sync are application features outside this core specification. The optional [display names profile](./12-display-names-profile.md) adds only a signed, non-unique name for a key; it creates no registry and no follow state.
 - Polls, events, live streams, pinned status and engagement counts are application-level features, not protocol message types.
 
 ## Actors and required state

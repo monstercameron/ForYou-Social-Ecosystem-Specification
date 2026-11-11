@@ -10,7 +10,7 @@ A client is any software that publishes or downloads records: a script, CLI, web
 
 Role-specific rules apply only to a client performing that role. A reader-only client has no funding or publishing obligations.
 
-The specification defines no screens, feeds, ranking, likes, follows, notifications or preference synchronization. An application MAY build them from downloaded records and MUST NOT present them as network state.
+The specification defines no screens, feeds, ranking, likes, follows, notifications or preference synchronization. An application MAY build them from downloaded records and MUST NOT present them as network state. The optional [display names profile](./12-display-names-profile.md) defines how to show a signed, non-unique name for a key; a follow remains local client state under that profile too.
 
 ## Keys
 

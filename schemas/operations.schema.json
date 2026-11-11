@@ -812,6 +812,80 @@
         }
       }
     },
+    "NameRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional display names profile. Structural check only: NFC, general-category, White_Space, UTF-8 byte-length, name_id, signature and clock rules require semantic validation.",
+      "required": [
+        "name_id",
+        "author_id",
+        "display_name",
+        "issued_at",
+        "previous_name_id",
+        "author_signature"
+      ],
+      "properties": {
+        "name_id": {
+          "type": "string",
+          "pattern": "^fynr2:[0-9a-f]{64}$"
+        },
+        "author_id": {
+          "$ref": "#/$defs/FinancialDid"
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^(?!.*  )[^\\s\\u0000-\\u001f\\u007f-\\u009f](?:[^\\u0000-\\u001f\\u007f-\\u009f]*[^\\s\\u0000-\\u001f\\u007f-\\u009f])?$",
+          "description": "Null withdraws the name. Otherwise 1 to 64 Unicode scalar values, at most 256 UTF-8 bytes, already NFC, one line, no Cc, Cf, Cn, Co, Cs, Zl or Zp character, no leading or trailing White_Space and no two consecutive spaces."
+        },
+        "issued_at": {
+          "$ref": "#/$defs/FinancialTime"
+        },
+        "previous_name_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^fynr2:[0-9a-f]{64}$"
+        },
+        "author_signature": {
+          "$ref": "#/$defs/FinancialSignature"
+        }
+      }
+    },
+    "NamesPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional display names profile. Advisory lookup candidates from one holder; never a claim of uniqueness.",
+      "required": [
+        "names",
+        "next_cursor"
+      ],
+      "properties": {
+        "names": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/NameRecord"
+          },
+          "description": "Current, non-withdrawn records ordered by author_id ascending by ASCII, one per author; enforce semantically."
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43
+        }
+      }
+    },
     "PublicReadError": {
       "type": "object",
       "additionalProperties": false,

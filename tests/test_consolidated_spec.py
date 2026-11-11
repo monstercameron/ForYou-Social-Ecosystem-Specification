@@ -10,7 +10,7 @@ class ConsolidationTests(unittest.TestCase):
     def test_one_document_set(self):
         expected={'README.md','01-overview.md','02-protocol.md','03-economics.md',
                   '04-compliance.md','05-portability.md','06-governance.md','07-clients.md','08-operator-guide.md','09-quality.md','10-owner-export-profile.md',
-                  '11-operator-compliance-guide.md','API-catalog.md'}
+                  '11-operator-compliance-guide.md','12-display-names-profile.md','API-catalog.md'}
         self.assertEqual({p.name for p in (ROOT/'docs').glob('*.md')},expected)
         stale=r'(?i)\b(?:document|profile)\s*(?:1[0-9]|2[0-9]|30)\b|23-launch-security|28-governance-and-pilot'
         for f in (ROOT/'docs').glob('*.md'):
