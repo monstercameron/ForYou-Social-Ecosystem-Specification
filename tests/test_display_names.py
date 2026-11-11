@@ -13,6 +13,7 @@ import unittest
 
 import jsonschema
 
+from test_external_media import media_url
 from test_security_profile import ROOT, AUTHOR, PROVIDER, did, pre, sign, verify
 
 EXAMPLE = ROOT / 'examples/name-record.example.json'
@@ -20,6 +21,10 @@ OPS = json.loads((ROOT / 'schemas/operations.schema.json').read_text(encoding='u
 DOC = (ROOT / 'docs/12-display-names-profile.md').read_text(encoding='utf-8')
 CATALOG = (ROOT / 'docs/API-catalog.md').read_text(encoding='utf-8')
 PREFIX = 'fynr2:'
+FIELDS = ('name_id', 'author_id', 'display_name', 'avatar', 'issued_at', 'previous_name_id', 'author_signature')
+AVATAR_BYTES = b'ForYou synthetic avatar image bytes'
+AVATAR = {'url': 'https://media.example/avatars/zoe.png', 'sha256': hashlib.sha256(AVATAR_BYTES).hexdigest(),
+          'size_bytes': len(AVATAR_BYTES)}
 WHITE_SPACE = set('\t\n\v\f\r \x85\xa0     　') | {chr(c) for c in range(0x2000, 0x200b)}
 EXCLUDED_CATEGORIES = {'Cc', 'Cf', 'Cn', 'Co', 'Cs', 'Zl', 'Zp'}
 
@@ -34,20 +39,20 @@ def name_id(record):
     return PREFIX + hashlib.sha256(pre('name-record-id', body)).hexdigest()
 
 
-def build_record(key, display_name, issued_at, previous_name_id):
-    record = {'author_id': did(key), 'display_name': display_name, 'issued_at': issued_at,
+def build_record(key, display_name, issued_at, previous_name_id, avatar=None):
+    record = {'author_id': did(key), 'display_name': display_name, 'avatar': avatar, 'issued_at': issued_at,
               'previous_name_id': previous_name_id}
     record['name_id'] = name_id(record)
     record['author_signature'] = sign(key, 'name-record', record)
-    return {k: record[k] for k in ('name_id', 'author_id', 'display_name', 'issued_at', 'previous_name_id', 'author_signature')}
+    return {k: record[k] for k in FIELDS}
 
 
 def build_example():
-    first = build_record(AUTHOR, 'Zoë Example', '2026-11-11T00:00:00Z', None)
+    first = build_record(AUTHOR, 'Zoë Example', '2026-11-11T00:00:00Z', None, dict(AVATAR))
     withdrawal = build_record(AUTHOR, None, '2026-11-12T00:00:00Z', first['name_id'])
     return {
         'status': 'SYNTHETIC ONLY: public test key. A signed name proves only which key signed it; it is not unique and not an identity claim.',
-        'description': 'A display name record of the optional display names profile and a later withdrawal record that replaces it.',
+        'description': 'A display name record with an avatar reference, and a later withdrawal record that replaces it. The avatar commits to the %d ASCII bytes "%s".' % (len(AVATAR_BYTES), AVATAR_BYTES.decode('ascii')),
         'record': first,
         'withdrawal': withdrawal,
     }
@@ -67,10 +72,23 @@ def check_name(value):
         raise ValueError('white space')
 
 
+def check_avatar(record):
+    """The avatar reference rules of the profile; raises ValueError. Nothing is fetched."""
+    avatar = record['avatar']
+    if avatar is None:
+        return
+    if record['display_name'] is None:
+        raise ValueError('avatar without a name')
+    if len(avatar['url']) > 2048:
+        raise ValueError('avatar URL length')
+    media_url(avatar['url'])
+
+
 def check_record(record, now='2026-11-12T00:00:00Z'):
-    """Profile verification steps 1-5; raises on failure."""
+    """Profile verification steps 1-6; raises on failure."""
     validator('NameRecord').validate(record)
     check_name(record['display_name'])
+    check_avatar(record)
     if record['name_id'] != name_id(record):
         raise ValueError('name_id')
     verify(record['author_id'], 'name-record', {k: v for k, v in record.items() if k != 'author_signature'},
@@ -114,6 +132,8 @@ class ExampleTests(unittest.TestCase):
         self.assertIsNone(record['previous_name_id'])
         self.assertEqual(withdrawal['previous_name_id'], record['name_id'])
         self.assertIsNone(withdrawal['display_name'])
+        self.assertIsNone(withdrawal['avatar'])
+        self.assertEqual(record['avatar'], AVATAR)
         self.assertEqual(current([record, withdrawal]), withdrawal)
         validator('NamesPage').validate({'names': [record], 'next_cursor': None})
         validator('NamesPage').validate({'names': [], 'next_cursor': 'A' * 43})
@@ -121,7 +141,9 @@ class ExampleTests(unittest.TestCase):
     def test_tampering_is_rejected(self):
         record = self.example['record']
         for field, value in (('display_name', 'Zoe Example'), ('issued_at', '2026-11-11T00:00:01Z'),
-                             ('author_id', did(PROVIDER)), ('previous_name_id', PREFIX + 'a' * 64)):
+                             ('author_id', did(PROVIDER)), ('previous_name_id', PREFIX + 'a' * 64),
+                             ('avatar', None), ('avatar', dict(AVATAR, url='https://other.example/zoe.png')),
+                             ('avatar', dict(AVATAR, sha256='0' * 64)), ('avatar', dict(AVATAR, size_bytes=1))):
             with self.subTest(field=field), self.assertRaises(Exception):
                 check_record(dict(record, **{field: value}))
         resigned = dict(record, display_name='Other')
@@ -145,6 +167,7 @@ class ExampleTests(unittest.TestCase):
         record = self.example['record']
         v = validator('NameRecord')
         for bad in (dict(record, extra=1), {k: x for k, x in record.items() if k != 'previous_name_id'},
+                    {k: x for k, x in record.items() if k != 'avatar'},
                     dict(record, name_id='fynr1:' + 'a' * 64), dict(record, display_name=''),
                     dict(record, display_name='a' * 65), dict(record, display_name=' Ada'),
                     dict(record, display_name='Ada\u0007'), dict(record, display_name='Ada  B')):
@@ -153,6 +176,56 @@ class ExampleTests(unittest.TestCase):
         self.assertFalse(page.is_valid({'names': [record] * 51, 'next_cursor': None}))
         self.assertFalse(page.is_valid({'names': [], 'next_cursor': None, 'generated_at': '2026-11-11T00:00:00Z'}))
         self.assertFalse(page.is_valid({'names': []}))
+
+
+class AvatarTests(unittest.TestCase):
+    def test_reference_commits_to_the_image_bytes(self):
+        self.assertEqual(AVATAR['sha256'], hashlib.sha256(AVATAR_BYTES).hexdigest())
+        self.assertEqual(AVATAR['size_bytes'], len(AVATAR_BYTES))
+        check_record(build_record(AUTHOR, 'Ada', '2026-11-11T00:00:00Z', None, dict(AVATAR)))
+        check_record(build_record(AUTHOR, 'Ada', '2026-11-11T00:00:00Z', None, dict(AVATAR, size_bytes=1048576)))
+
+    def test_avatar_needs_a_name(self):
+        withdrawn = build_record(AUTHOR, None, '2026-11-11T00:00:00Z', None, dict(AVATAR))
+        with self.assertRaisesRegex(ValueError, 'avatar without a name'):
+            check_record(withdrawn)
+
+    def test_signed_but_invalid_references_are_rejected(self):
+        cases = {
+            'plain HTTP': dict(AVATAR, url='http://media.example/zoe.png'),
+            'userinfo': dict(AVATAR, url='https://user@media.example/zoe.png'),
+            'uppercase host': dict(AVATAR, url='https://Media.example/zoe.png'),
+            'URL too long': dict(AVATAR, url='https://media.example/' + 'a' * 2048),
+            'uppercase digest': dict(AVATAR, sha256=AVATAR['sha256'].upper()),
+            'short digest': dict(AVATAR, sha256=AVATAR['sha256'][:63]),
+            'empty image': dict(AVATAR, size_bytes=0),
+            'image over 1 MiB': dict(AVATAR, size_bytes=1048577),
+            'fractional size': dict(AVATAR, size_bytes=10.5),
+            'unknown field': dict(AVATAR, alt_text='Zoë'),
+            'missing size': {k: v for k, v in AVATAR.items() if k != 'size_bytes'},
+            'not an object': AVATAR['url'],
+        }
+        for reason, avatar in cases.items():
+            with self.subTest(reason=reason), self.assertRaises(Exception):
+                check_record(build_record(AUTHOR, 'Ada', '2026-11-11T00:00:00Z', None, avatar))
+
+    def test_document_agrees_with_schema(self):
+        avatar = OPS['$defs']['NameRecord']['properties']['avatar']
+        listed = re.search(r'An avatar reference is `\{([a-z0-9_,]+)\}`', DOC).group(1).split(',')
+        self.assertEqual(set(listed), set(avatar['properties']))
+        self.assertEqual(set(avatar['required']), set(avatar['properties']))
+        self.assertFalse(avatar['additionalProperties'])
+        self.assertIn('at most %d ASCII characters' % avatar['properties']['url']['maxLength'], DOC)
+        self.assertIn('an integer from 1 to %d' % avatar['properties']['size_bytes']['maximum'], DOC)
+        launch = json.loads((ROOT / 'schemas/launch.schema.json').read_text(encoding='utf-8'))
+        self.assertEqual(avatar['properties']['url']['pattern'], launch['$defs']['MediaReference']['properties']['url']['pattern'])
+        for anchor in ('#external-url-validation', '#media-consent', '#isolated-media-fetching',
+                       '#media-digest-and-fetching', '#decoding-and-budgets'):
+            self.assertIn('./02-protocol.md' + anchor, DOC)
+        for rule in ('MUST NOT contact an avatar host before the reader has consented',
+                     'It MUST NOT fetch, proxy, cache, resize or host the image.',
+                     'It MUST be null when `display_name` is null'):
+            self.assertIn(rule, DOC)
 
 
 class NameRuleTests(unittest.TestCase):

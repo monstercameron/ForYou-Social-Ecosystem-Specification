@@ -4,7 +4,7 @@
 
 This is an optional profile. A provider, replica or client is conformant to core 1.0 without it. A holder that offers the routes below MUST follow this profile, and a client that shows display names from it MUST apply its client rules.
 
-The profile defines a signed name record, three routes and the rules for showing names. It adds no message type, no fee and no core state. Likes, follows, profiles and ranking remain outside the core, as stated in the [overview](./01-overview.md#core-principles).
+The profile defines a signed name record, which can point to an avatar image, three routes and the rules for showing names and avatars. It adds no message type, no fee and no core state. Likes, follows, profiles and ranking remain outside the core, as stated in the [overview](./01-overview.md#core-principles).
 
 In this document a **holder** is a provider or replica that offers the routes.
 
@@ -15,16 +15,18 @@ In this document a **holder** is a provider or replica that offers the routes.
 - A signed name means exactly one thing: this key signed this name. A client MAY show that as "signed by this key" and nothing more.
 - People follow the key, never the name. A follow is client state, not protocol state. Renaming keeps followers. Using another author's name gains none.
 - An author MAY keep a name local, visible only in their own client, or sign and publish it.
+- An avatar is a picture the author attaches to the name. The record carries a reference to the picture and its hash, never the picture. An avatar is as untrusted as the name.
 
 ## Name records
 
-A `NameRecord` is `{name_id,author_id,display_name,issued_at,previous_name_id,author_signature}`. It is a closed object: an unknown field is rejected. It is self-authenticating and portable between holders.
+A `NameRecord` is `{name_id,author_id,display_name,avatar,issued_at,previous_name_id,author_signature}`. It is a closed object: an unknown field is rejected. It is self-authenticating and portable between holders.
 
 | Field | Rule |
 | --- | --- |
 | `name_id` | `fynr2:` plus lowercase SHA256 hex of P("name-record-id", the record without `name_id` and `author_signature`) |
 | `author_id` | The author's root canonical `did:key` |
 | `display_name` | A string that satisfies the [name rules](#name-rules), or null. Null withdraws the name |
+| `avatar` | An [avatar reference](#avatar-references), or null. It MUST be null when `display_name` is null |
 | `issued_at` | The signing time, in the protocol's [date format](./02-protocol.md#value-formats) |
 | `previous_name_id` | Null for the author's first record; otherwise the `name_id` of the record it replaces |
 | `author_signature` | Made by `author_id` over P("name-record", the record without `author_signature`) |
@@ -50,15 +52,31 @@ A non-null `display_name` MUST satisfy all of the following. Character propertie
 
 The rules limit what a name can do on screen. They do not make a name safe, unique or truthful.
 
+### Avatar references
+
+An avatar reference is `{url,sha256,size_bytes}`. It is a closed object that points to one image on a host the author chose. The record commits to the image bytes, so the host cannot change the picture under a signed record.
+
+| Avatar field | Rule |
+| --- | --- |
+| url | A restricted HTTPS URL under the protocol's [external URL validation](./02-protocol.md#external-url-validation), of at most 2048 ASCII characters |
+| sha256 | Exactly 64 lowercase hexadecimal digits: SHA-256 of the exact complete image bytes, as for [post media](./02-protocol.md#media-digest-and-fetching) |
+| size_bytes | The exact byte length of the image, an integer from 1 to 1048576 |
+
+- A reference is checked as text, without network access. Nobody fetches the image to accept a record.
+- The network stores and serves no image bytes. The author's host serves them and can remove them; the avatar is then unavailable and the name is unaffected.
+- A new picture needs a new record, like a new name. A record that withdraws the name has a null `avatar`.
+- The profile fixes what is signed and how a client may load it. The choice of host, the upload, and the shape, size, cropping and caching of the picture on screen are left to the author and the client.
+
 ### Verification
 
 A verifier accepts a name record only when all of the following hold:
 
 1. The record matches the closed `NameRecord` schema.
 2. `display_name` is null or satisfies the name rules.
-3. The recomputed `name_id` equals the stated one.
-4. `author_signature` verifies under `author_id`.
-5. `issued_at` is not more than 60 seconds ahead of the verifier's clock. This is the protocol's general [clock tolerance](./02-protocol.md#time).
+3. `avatar` is null or satisfies the [avatar reference](#avatar-references) rules, and it is null when `display_name` is null.
+4. The recomputed `name_id` equals the stated one.
+5. `author_signature` verifies under `author_id`.
+6. `issued_at` is not more than 60 seconds ahead of the verifier's clock. This is the protocol's general [clock tolerance](./02-protocol.md#time).
 
 A record that fails any check is invalid. It is never shown and never selected.
 
@@ -77,6 +95,7 @@ The current record is a local result over known records. It does not prove that 
 - A holder serializes acceptance per author, so that the current record follows the selection rule, never the arrival order.
 - **Accepted-post rule.** A holder accepts a name record only for an `author_id` of which it has accepted at least one public post, signed by that author or by a valid delegate. Names are free, so they ride on an identity that has paid for at least one post.
 - **Rate limit.** A holder accepts at most one new record per author in any 24 hours, measured by its own clock at acceptance. A holder MAY set a looser limit and MUST disclose it. An identical retry does not count.
+- A holder checks an avatar reference as text only. It MUST NOT fetch, proxy, cache, resize or host the image.
 - A holder MAY refuse or withhold a name record under its disclosed policy or a legal restriction, as for any content. Such a decision is local to that holder.
 - Name records are not messages. They carry no receipt and no fee. They never appear in listings, `/v1/changes`, settlement or the Lifetime Vault, and they have no retention period.
 
@@ -149,6 +168,19 @@ Results are candidates from this holder only. A result is never a claim that a n
 - A client MUST NOT present a name as unique, official or identity-verified. A signed name gets at most a neutral "signed by this key" mark.
 - Where the core requires the canonical target to be available to the reader, as for [signed references](./02-protocol.md#signed-structured-references), a display name is shown in addition to that target, never instead of it.
 
+### Avatars
+
+An avatar is external media that an author chose. Loading it tells the author's host that this reader is looking, and one avatar can appear on every post in a feed.
+
+- Every core rule for external media applies to an avatar: [media consent](./02-protocol.md#media-consent), [isolated media fetching](./02-protocol.md#isolated-media-fetching), [digest verification](./02-protocol.md#media-digest-and-fetching) and [decoding and budgets](./02-protocol.md#decoding-and-budgets).
+- A client MUST NOT contact an avatar host before the reader has consented for that item or for that exact origin. An author's choice of host is not reader consent.
+- A client MUST abort a transfer that exceeds `size_bytes`, reject an image whose length differs from it, and verify the SHA-256 over the complete bytes before any decoder sees them.
+- A client shows an avatar as a still image. It MUST NOT animate it.
+- Without consent, after any failure, or when the reader has turned avatars off, a client shows a local placeholder that needs no network request, for example a pattern derived from `author_id`. A client MUST let the reader turn avatars off.
+- A client MAY keep verified image bytes and reuse them for any record with the same `sha256`. Reuse needs no new request.
+- An avatar never replaces the short fingerprint, which stays visible wherever the name is shown.
+- An avatar proves nothing about the author. Any key can sign a reference to any picture, including a picture another author uses.
+
 ### Petnames
 
 A reader MAY assign a local petname to a key. A petname takes precedence over the author's display name and is marked as the reader's own. Petnames are client state and are never published by this profile.
@@ -165,7 +197,7 @@ If a followed key publishes a [key succession](./02-protocol.md#key-succession),
 
 ### Collisions
 
-A client marks a collision when two different keys on screen, or a visible key and a followed key, have names that match after NFC and Unicode simple case folding. A client MAY also mark names that are confusable under its own rules.
+A client marks a collision when two different keys on screen, or a visible key and a followed key, have names that match after NFC and Unicode simple case folding. A client MAY also mark names that are confusable under its own rules. Two keys can also sign the same avatar: the collision mark and both fingerprints stay visible whatever the avatars show.
 
 ### Escaping and bidirectional isolation
 
@@ -176,5 +208,6 @@ A display name is untrusted text. A client MUST escape it for the context it is 
 - **No registry.** Nobody assigns, reserves, sells or arbitrates names.
 - **No uniqueness.** Any number of keys can use the same name. A holder does not reject a name because another key uses it.
 - **No identity proof.** A signed name proves only which key signed it.
+- **No image hosting.** The network holds a reference and a hash, never image bytes. Holders never fetch avatars, and a client loads one only with the reader's consent.
 - **No social graph on the wire.** There are no follower lists, follow objects, follower counts or subscription routes. Following stays in the client.
 - **No core change.** A provider is conformant without this profile, and posts, fees, settlement and retention are unchanged.
