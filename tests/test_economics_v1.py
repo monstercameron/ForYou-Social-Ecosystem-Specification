@@ -307,7 +307,17 @@ class SettlementTests(unittest.TestCase):
     def claim(self, receipts, d=14, previous='claim2', key=PROVIDER, decl=None, **kw):
         prev = self.w[previous] if isinstance(previous, str) else previous
         return em.make_claim(key, NET, [em.leaf_of(r) for r in receipts], kw.get('start', day(d)), kw.get('end', day(d + 1)),
-                             self.decl if decl is None else decl, previous=prev)
+                             self.decl if decl is None else decl, previous=prev, succession=kw.get('succession'))
+
+    def rotate(self, at, register=True, new=None):
+        """A key succession to the next provider key at `at`, with the declaration the new key signs for it."""
+        new = em.PROVIDER_NEXT if new is None else new
+        s, d = em.key_succession(PROVIDER, new, at), em.retention_declaration(new, em.YEAR, at)
+        for m in self.monitors:
+            m.register_declaration(d)
+            if register:
+                m.register_succession(s)
+        return s, d['declaration_id']
 
     def receipts(self, texts, d=14, key=PROVIDER, issued=None):
         return [em.make_receipt(self.w['btc'], t, issued or day(d, 6), key=key) for t in texts]
@@ -338,7 +348,9 @@ class SettlementTests(unittest.TestCase):
         structural('SettlementLeavesPage', {'claim_id': self.w['claim']['claim_id'], 'offset': 0, 'leaves': self.w['leaves']})
         structural('SettlementWitnessesPage', {'witnesses': self.w['witnesses']})
         structural('MonitorWitnessesPage', {'witnesses': self.w['witnesses'][:1], 'refusals': [X['settlement_refusal_example']], 'holds': [], 'claims': [self.w['claim']]})
-        structural('EquivocationsPage', {'proofs': [[self.w['claim'], self.w['claim2']]]})
+        structural('EquivocationsPage', {'proofs': [em.equivocation_proof(self.w['claim2'], self.w['claim2'], self.w['claim'])]})
+        structural('EquivocationProof', dict(em.equivocation_proof(self.w['claim'], self.w['claim']), predecessor=None))
+        structural('EquivocationProof', dict(em.equivocation_proof(self.w['claim2'], self.w['claim2'], self.w['claim']), successions=[X['key_succession']]))
         structural('VaultDelivery', {'message': {}, 'proof': X['settlement_proof']})
         with self.assertRaises(jsonschema.ValidationError):
             structural('SettlementRefusal', dict(X['settlement_refusal_example'], reason='content'))
@@ -420,20 +432,36 @@ class SettlementTests(unittest.TestCase):
         text = (em.ROOT / 'docs/03-economics.md').read_text(encoding='utf-8')
         self.assertIn('has no vote', text)
 
-    def test_claim_must_name_the_governing_declaration(self):
+    def test_a_claim_names_its_declaration_and_only_the_claim_decides(self):
         short = em.retention_declaration(PROVIDER, em.YEAR, '2027-01-20T00:00:00Z')
         for m in self.monitors:
             m.register_declaration(short)
         r = self.receipts(['under ten years'])
-        c, l = self.claim(r, decl=short['declaration_id'])  # the short declaration was not yet in force on the 14th
+        c, l = self.claim(r, decl=short['declaration_id'])  # the short declaration takes effect after this period starts
         self.assertEqual(self.reason(c, l), 'bad_period')
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(c, l, NOW)
+        self.assertTrue(caught.exception.provable)  # the named object itself shows the fault
         c, l = self.claim(r)
         self.assertEqual(len(self.audit(c, l)[0]), 5)
         later = self.receipts(['after the change'], d=21)
-        c2, l2 = self.claim(later, d=21, previous=c)  # still naming the old declaration after the new one took effect
-        self.assertEqual(self.reason(c2, l2), 'bad_period')
+        # A declaration takes effect on the chain when a claim first names it: publishing it alone changes nothing,
+        # so no later-signed declaration can make this claim invalid.
+        keep, kl = self.claim(later, d=21, previous=c)
+        self.assertIsInstance(self.monitors[0].check(keep, kl, day(22, 12)), int)
         c2, l2 = self.claim(later, d=21, previous=c, decl=short['declaration_id'])
-        self.assertEqual(len(self.audit(c2, l2)[0]), 5)
+        self.assertEqual(len(self.audit(c2, l2, day(22, 12))[0]), 5)
+        # Another provider's declaration cannot be named, and an unknown one proves nothing.
+        other, ol = self.claim(self.receipts(['borrowed'], d=22), d=22, previous=c2, decl=self.w['decl_b']['declaration_id'])
+        for m in self.monitors:
+            m.register_declaration(self.w['decl_b'])
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(other, ol, day(23, 12))
+        self.assertTrue(caught.exception.provable)
+        unknown, ul = self.claim(self.receipts(['unknown'], d=22), d=22, previous=c2, decl='fyrd2:' + 'ab' * 32)
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(unknown, ul, day(23, 12))
+        self.assertFalse(caught.exception.provable)
 
     def test_declaration_cannot_be_backdated_over_claimed_periods(self):
         backdated = em.retention_declaration(PROVIDER, em.YEAR, day(8))  # published later, dated between two claimed periods
@@ -458,13 +486,32 @@ class SettlementTests(unittest.TestCase):
         c, l = self.claim(r, d=25)
         self.assertEqual(len(self.audit(c, l, day(26, 12))[0]), 5)
         r2 = self.receipts(['new key'], d=27, key=em.PROVIDER_NEXT)
-        c2, l2 = self.claim(r2, d=27, previous=c, key=em.PROVIDER_NEXT)
-        self.assertEqual(self.reason(c2, l2, at=day(28, 12)), 'unknown_provider_key')
-        succession = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(26))
+        succession, decl = self.rotate(day(26), register=False)
+        c2, l2 = self.claim(r2, d=27, previous=c, key=em.PROVIDER_NEXT, decl=decl, succession=succession)
+        self.assertEqual(self.reason(c2, l2, at=day(28, 12)), 'unknown_provider_key')  # the named succession is not yet fetched
         for m in self.monitors:
             m.register_succession(succession)
+        unnamed, ul = self.claim(r2, d=27, previous=c, key=em.PROVIDER_NEXT, decl=decl)  # another key, naming no succession
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(unnamed, ul, day(28, 12))
+        self.assertEqual((caught.exception.reason, caught.exception.provable), ('unknown_provider_key', True))
+        inherited, il = self.claim(r2, d=27, previous=c, key=em.PROVIDER_NEXT, succession=succession)  # the old key's declaration
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(inherited, il, day(28, 12))
+        self.assertEqual((caught.exception.reason, caught.exception.provable), ('bad_period', True))
         witnesses, refusals = self.audit(c2, l2, day(28, 12))
         self.assertEqual((len(witnesses), len(refusals)), (5, 0))  # credit deposited under the old key carries over
+        r3 = self.receipts(['second claim of the new key'], d=28, key=em.PROVIDER_NEXT)
+        again, al = self.claim(r3, d=28, previous=c2, key=em.PROVIDER_NEXT, decl=decl, succession=succession)
+        with self.assertRaises(em.Rejected) as caught:  # only the first claim of a new key names a succession
+            self.monitors[0].check(again, al, day(29, 12))
+        self.assertTrue(caught.exception.provable)
+        c3, l3 = self.claim(r3, d=28, previous=c2, key=em.PROVIDER_NEXT, decl=decl)
+        self.assertEqual(len(self.audit(c3, l3, day(29, 12))[0]), 5)
+        back, bl = self.claim(self.receipts(['old key again'], d=29), d=29, previous=c3)  # the chain now belongs to the new key
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(back, bl, day(30, 12))
+        self.assertEqual((caught.exception.reason, caught.exception.provable), ('unknown_provider_key', True))
         with self.assertRaises(ValueError):
             self.monitors[0].register_succession(em.key_succession(PROVIDER, em.MONITORS[0], '2027-06-01T00:00:00Z'))
 
@@ -541,9 +588,11 @@ class SettlementTests(unittest.TestCase):
         for n in range(6):
             r = self.receipts(['fork %d' % n], d=12)
             forks.append(self.claim(r, d=12, previous='claim') + (r,))
-        self.assertTrue(em.equivocation(forks[0][0], forks[1][0]))
-        self.assertFalse(em.equivocation(forks[0][0], forks[0][0]))
-        self.assertFalse(em.equivocation(forks[0][0], dict(forks[1][0], total_base_units='9')))  # not actually signed
+        parent = self.w['claim']
+        self.assertTrue(em.equivocation(forks[0][0], forks[1][0], parent))
+        self.assertFalse(em.equivocation(forks[0][0], forks[1][0]))  # without the predecessor nothing is proven
+        self.assertFalse(em.equivocation(forks[0][0], forks[0][0], parent))
+        self.assertFalse(em.equivocation(forks[0][0], dict(forks[1][0], total_base_units='9'), parent))  # not actually signed
         descending = sorted(forks, key=lambda f: f[0]['claim_id'], reverse=True)
 
         def settled_forks(plan):
@@ -585,18 +634,36 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(monitors[0].audit(bad, a[1], day(13, 12))[0], 'refused')
         self.assertEqual(monitors[0].audit(a[0], a[1], day(13, 12))[0], 'witnessed')
 
+    def test_equivocation_proofs_cannot_be_forged(self):
+        """Reproduces the reviewed gap: anyone can sign a claim that copies an honest claim's previous_claim_id."""
+        parent = self.w['claim']
+        honest, _ = self.claim(self.receipts(['honest'], d=12), d=12, previous=parent)
+        forged, _ = self.claim(self.receipts(['forged'], d=12, key=em.PROVIDER_B), d=12, previous=parent, key=em.PROVIDER_B)
+        self.assertEqual(forged['previous_claim_id'], honest['previous_claim_id'])
+        self.assertFalse(em.equivocation(honest, forged, parent))  # an unrelated key is not a proof
+        succession = em.key_succession(PROVIDER, em.PROVIDER_B, day(12))  # B signs it too: the proof must still name it
+        named, _ = self.claim(self.receipts(['named'], d=12, key=em.PROVIDER_B), d=12, previous=parent, key=em.PROVIDER_B, succession=succession)
+        self.assertFalse(em.equivocation(honest, named, parent))  # the succession is not in the proof
+        proof = em.equivocation_proof(honest, named, parent, [succession])
+        structural('EquivocationProof', proof)
+        self.assertTrue(em.equivocation(*proof['claims'], proof['predecessor'], proof['successions']))
+        self.assertFalse(em.equivocation(honest, named, self.w['claim2'], [succession]))  # the wrong predecessor
+        first, _ = self.claim(self.receipts(['first'], d=1), d=1, previous=None)
+        other, _ = self.claim(self.receipts(['other'], d=1, key=em.PROVIDER_B), d=1, previous=None, key=em.PROVIDER_B)
+        self.assertFalse(em.equivocation(first, other))  # sequence 1: only the same provider_id
+        again, _ = self.claim(self.receipts(['again'], d=1), d=1, previous=None)
+        self.assertTrue(em.equivocation(first, again))
+
     def test_succession_cannot_double_count_deposits_or_be_griefed(self):
         """Reproduces two reviewed attacks: succession onto a key with its own chain, and a third party's deposit blocking a rotation."""
         m = self.monitors[0]
         with self.assertRaises(ValueError):  # B has signed claims of its own chain
             m.register_succession(em.key_succession(PROVIDER, em.PROVIDER_B, '2027-02-01T00:00:00Z'))
         self.chain.deposit(C, NET, 50000)  # anyone sends a deposit carrying the new key's own commitment
-        succession = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(13))
-        for monitor in self.monitors:
-            monitor.register_succession(succession)  # the succession is unaffected
+        succession, decl = self.rotate(day(13))  # the succession is unaffected
         self.assertEqual(self.chain.deposited(m.line(C), NET, self.trust), MIN)  # and that deposit is not counted for the chain
         r = self.receipts(['signed by the new key'], d=14, key=em.PROVIDER_NEXT)
-        c, l = self.claim(r, d=14, key=em.PROVIDER_NEXT)
+        c, l = self.claim(r, d=14, key=em.PROVIDER_NEXT, decl=decl, succession=succession)
         witnesses, refusals = self.audit(c, l)
         self.assertEqual((len(witnesses), len(refusals)), (5, 0))
         self.assertEqual(int(witnesses[0]['credit_base_units']), MIN - int(c['cumulative_base_units']))
@@ -604,6 +671,11 @@ class SettlementTests(unittest.TestCase):
             m.register_succession(em.key_succession(em.PROVIDER_B, em.PROVIDER_NEXT, '2027-02-01T00:00:00Z'))
         self.chain.deposit(A, NET, 20000, at='2027-01-20T00:00:00Z')  # top-ups keep using the first key's commitment
         self.assertEqual(self.chain.deposited(m.line(C), NET, self.trust), 3 * MIN)
+        # Also on a network whose first claim the new key signs, deposits carry the provider's first key.
+        self.chain.deposit(A, 'ethereum-mainnet', 10 ** 15)
+        er = [em.make_receipt(self.w['eth'], 'first ethereum claim', day(14, 6), key=em.PROVIDER_NEXT)]
+        ec, el = em.make_claim(em.PROVIDER_NEXT, 'ethereum-mainnet', [em.leaf_of(x) for x in er], day(14), day(15), decl)
+        self.assertEqual(len(self.audit(ec, el)[0]), 5)
 
     def test_minority_witness_holders_follow_the_settled_claim(self):
         """Reproduces the reviewed gap: a provider shows A to four monitors and B to one; that one must not be stranded."""
@@ -628,19 +700,19 @@ class SettlementTests(unittest.TestCase):
 
     def test_a_receipt_is_claimed_by_the_key_that_issued_it(self):
         """Reproduces the reviewed gap: a receipt issued by the old key inside a claim signed by the new key never verifies."""
-        for m in self.monitors:
-            m.register_succession(em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(20)))
+        succession, decl = self.rotate(day(20))
         old_receipts = self.receipts(['issued by the old key'], d=14)
-        wrong, wl = self.claim(old_receipts, d=14, key=em.PROVIDER_NEXT)  # new key claiming a period before the succession
+        wrong, wl = self.claim(old_receipts, d=14, key=em.PROVIDER_NEXT, decl=decl, succession=succession)  # a period before the succession
         self.assertEqual(self.reason(wrong, wl), 'unknown_provider_key')
+        with self.assertRaises(em.Rejected) as caught:
+            self.monitors[0].check(wrong, wl, NOW)
+        self.assertTrue(caught.exception.provable)  # the named succession itself shows the fault
         right, rl = self.claim(old_receipts, d=14)
         witnesses, _ = self.audit(right, rl)
         self.assertEqual(self.state(old_receipts[0], right, rl, witnesses), 'settled')
-        late_old = self.receipts(['old key after the succession'], d=21)
-        c, l = self.claim(late_old, d=21, previous=right)
-        self.assertEqual(self.reason(c, l), 'unknown_provider_key')
+        self.assertEqual(em.receipt_state(old_receipts[0], em.make_proof(wrong, wl, 0, [m._witness(wrong, 0, NOW) for m in self.monitors]), self.committee), 'unsettled')
         new_receipts = self.receipts(['issued by the new key'], d=21, key=em.PROVIDER_NEXT)
-        c, l = self.claim(new_receipts, d=21, previous=right, key=em.PROVIDER_NEXT)
+        c, l = self.claim(new_receipts, d=21, previous=right, key=em.PROVIDER_NEXT, decl=decl, succession=succession)
         witnesses, refusals = self.audit(c, l)
         self.assertEqual((len(witnesses), len(refusals)), (5, 0))
         self.assertEqual(self.state(new_receipts[0], c, l, witnesses), 'settled')
@@ -886,10 +958,16 @@ class SettlementTests(unittest.TestCase):
         self.assertIsNotNone(held.takeover([(a2, la2, wa2)], self.committee, NOW, ancestors=[a1]))
         self.assertEqual(held.holds, [])
         # The verifier's chain check does not accept a change of provider key without a verified succession.
-        other_key, ol = self.claim(self.receipts(['other key'], d=14, key=em.PROVIDER_NEXT), d=14, previous=a1, key=em.PROVIDER_NEXT)
+        s = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(13))
+        for named in (None, s):
+            other_key, ol = self.claim(self.receipts(['other key'], d=14, key=em.PROVIDER_NEXT), d=14, previous=a1, key=em.PROVIDER_NEXT, succession=named)
+            forged = em.make_proof(a1, la1, index, [m._witness(other_key, 0, day(15, 12)) for m in monitors[:4]], chain=[other_key])
+            self.assertEqual(em.receipt_state(ra[0], forged, self.committee), 'unsettled')
+            self.assertEqual(em.receipt_state(ra[0], forged, self.committee, successions=[s]), 'settled' if named else 'unsettled')
+        misdated = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(15))  # takes effect after the claim's period starts
+        other_key, ol = self.claim(self.receipts(['other key'], d=14, key=em.PROVIDER_NEXT), d=14, previous=a1, key=em.PROVIDER_NEXT, succession=misdated)
         forged = em.make_proof(a1, la1, index, [m._witness(other_key, 0, day(15, 12)) for m in monitors[:4]], chain=[other_key])
-        self.assertEqual(em.receipt_state(ra[0], forged, self.committee), 'unsettled')
-        self.assertEqual(em.receipt_state(ra[0], forged, self.committee, successions={A: C}), 'settled')
+        self.assertEqual(em.receipt_state(ra[0], forged, self.committee, successions=[misdated]), 'unsettled')
 
     def test_a_hold_on_a_single_claim_ends_when_it_passes_audit(self):
         blind = em.Monitor(em.FOUNDATION, self.trust, em.Chain(), [self.w['btc'], self.w['eth']])  # sees no deposits yet
@@ -902,9 +980,11 @@ class SettlementTests(unittest.TestCase):
         self.assertEqual(blind.audit(self.w['claim2'], self.w['leaves2'], NOW)[0], 'witnessed')
         self.assertEqual(blind.holds, [])
 
-    def test_a_late_signed_declaration_proves_nothing(self):
+    def test_a_late_signed_declaration_cannot_displace_a_claim(self):
         """Reproduces the reviewed attack: after A settles, the provider signs a backdated declaration D2 and a claim B
-        naming it, hoping newcomers will find A 'invalid' and complete B."""
+        naming it, hoping newcomers will find A 'invalid' and complete B. A claim's validity depends only on the claim,
+        its predecessor and the declaration it names, so D2 changes nothing about A. B is only a second claim at the
+        sequence: the newcomers hold, and B never settles."""
         monitors = self.primed()
         h1, h2, h3, h4, f = monitors
         ra, rb = self.receipts(['claim A'], d=12), self.receipts(['claim B'], d=12)
@@ -917,13 +997,60 @@ class SettlementTests(unittest.TestCase):
         newcomers = [self.new_monitor(k) for k in (em.PROVIDER_B, em.PROVIDER_NEXT)]
         visible_a = [w for w in wa if w['witness_id'] != did(f.key)]  # three of five visible: no quorum
         for n in newcomers:
-            n.register_declaration(d2)  # the newcomer holds D2, under which A no longer names the governing declaration
+            n.register_declaration(d2)
+            self.assertIsInstance(n.check(A_, la, NOW, lateness=False), int)  # holding D2 does not touch A
             self.assertIsNone(n.takeover([(A_, la, visible_a), (B_, lb, wb)], self.committee, '2027-02-01T00:00:00Z'))
+            self.assertEqual(len(n.holds), 1)
         new = sorted(set(self.committee) - {did(h1.key), did(h2.key)} | {B, C})
         self.assertEqual(self.state(rb[0], B_, lb, wb, committee=new), 'unsettled')
-        with self.assertRaises(em.Rejected) as caught:
-            newcomers[0].check(A_, la, NOW, lateness=False)
-        self.assertFalse(caught.exception.provable)  # a declaration fault is never proof
+
+    def test_declaration_and_succession_faults_do_not_block_the_correction(self):
+        """The former known limit of the handover: an honest provider publishes a claim with a wrong declaration or a
+        misdated succession, a faulty monitor witnesses it, the provider corrects it, and the committee changes before
+        the correction has a quorum. The fault is provable from the named object, so newcomers witness the correction."""
+        monitors = self.primed()
+        f = monitors[4]
+        r = self.receipts(['honest mistake'], d=12)
+        future = em.retention_declaration(PROVIDER, em.YEAR, day(20))  # not yet in effect for this period
+        bad, bl = self.claim(r, d=12, previous='claim', decl=future['declaration_id'])
+        good, gl = self.claim(r, d=12, previous='claim')
+        for m in monitors[:4]:
+            m.register_declaration(future)
+            self.assertEqual(m.audit(bad, bl, day(13, 12))[1]['reason'], 'bad_period')
+        wbad = [f._witness(bad, 0, day(13, 12))]
+        wgood = [m.audit(good, gl, day(13, 13))[1] for m in monitors[2:4]]  # only two honest witnesses before the change
+        for key in (em.PROVIDER_B, em.PROVIDER_NEXT):
+            n = self.new_monitor(key)
+            n.register_declaration(future)
+            w = n.takeover([(bad, bl, wbad), (good, gl, wgood)], self.committee, '2027-02-01T00:00:00Z')
+            self.assertEqual(w['claim_id'], good['claim_id'])
+            self.assertEqual(n.holds, [])
+        # The same for a first new-key claim whose named succession takes effect after its period starts.
+        monitors = self.primed()
+        f = monitors[4]
+        late = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(20))
+        fixed = em.key_succession(PROVIDER, em.PROVIDER_NEXT, day(12))
+        decl = em.retention_declaration(em.PROVIDER_NEXT, em.YEAR, day(12))
+        r = self.receipts(['new key'], d=12, key=em.PROVIDER_NEXT)
+        bad, bl = self.claim(r, d=12, previous='claim', key=em.PROVIDER_NEXT, decl=decl['declaration_id'], succession=late)
+        good, gl = self.claim(r, d=12, previous='claim', key=em.PROVIDER_NEXT, decl=decl['declaration_id'], succession=fixed)
+        for m in monitors[:4]:
+            m.register_declaration(decl)
+            m.register_succession(late)
+            m.register_succession(fixed)
+            self.assertEqual(m.audit(bad, bl, day(13, 12))[1]['reason'], 'unknown_provider_key')
+        wbad = [f._witness(bad, 0, day(13, 12))]
+        wgood = [m.audit(good, gl, day(13, 13))[1] for m in monitors[2:4]]
+        self.assertEqual(len(wgood), 2)
+        n = self.new_monitor(em.PROVIDER_B)
+        n.register_declaration(decl)
+        n.register_succession(late)
+        n.register_succession(fixed)
+        w = n.takeover([(bad, bl, wbad), (good, gl, wgood)], self.committee, '2027-02-01T00:00:00Z')
+        self.assertEqual(w['claim_id'], good['claim_id'])
+        text = (em.ROOT / 'docs/03-economics.md').read_text(encoding='utf-8')
+        self.assertNotIn('Known limit of the handover', text)
+        self.assertIn('never blocks an honest provider', text)
 
     def test_a_period_fault_is_proven_and_does_not_block_the_correction(self):
         """Reproduces the reviewed deadlock: a faulty monitor witnesses the honest provider's too-long-period claim."""

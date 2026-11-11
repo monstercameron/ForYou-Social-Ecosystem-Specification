@@ -1862,6 +1862,7 @@
         "period_start",
         "period_end",
         "declaration_id",
+        "succession_id",
         "receipt_count",
         "total_base_units",
         "cumulative_base_units",
@@ -1907,6 +1908,17 @@
         "declaration_id": {
           "type": "string",
           "pattern": "^fyrd2:[0-9a-f]{64}$"
+        },
+        "succession_id": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^fyks2:[0-9a-f]{64}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "receipt_count": {
           "type": "integer",
@@ -3272,13 +3284,79 @@
           "minItems": 0,
           "maxItems": 1000,
           "items": {
-            "type": "array",
-            "minItems": 2,
-            "maxItems": 2,
-            "items": {
-              "$ref": "#/$defs/SettlementClaim"
-            }
+            "$ref": "#/$defs/EquivocationProof"
           }
+        }
+      }
+    },
+    "EquivocationProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claims",
+        "predecessor",
+        "successions"
+      ],
+      "properties": {
+        "claims": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/SettlementClaim"
+          }
+        },
+        "predecessor": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/SettlementClaim"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "successions": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/KeySuccession"
+          }
+        }
+      }
+    },
+    "KeySuccession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "succession_id",
+        "old_id",
+        "new_id",
+        "effective_at",
+        "old_signature",
+        "new_signature"
+      ],
+      "description": "The KeySuccession of launch.schema.json. old_id and new_id MUST differ; enforce semantically.",
+      "properties": {
+        "succession_id": {
+          "type": "string",
+          "pattern": "^fyks2:[0-9a-f]{64}$"
+        },
+        "old_id": {
+          "$ref": "#/$defs/FinancialDid"
+        },
+        "new_id": {
+          "$ref": "#/$defs/FinancialDid"
+        },
+        "effective_at": {
+          "$ref": "#/$defs/FinancialTime"
+        },
+        "old_signature": {
+          "$ref": "#/$defs/FinancialSignature"
+        },
+        "new_signature": {
+          "$ref": "#/$defs/FinancialSignature"
         }
       }
     },

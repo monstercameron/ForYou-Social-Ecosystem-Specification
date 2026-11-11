@@ -713,9 +713,15 @@ Both MUST verify.
 Verification rules:
 
 - A signature by `old_id` remains valid for objects whose provider-signed time (`issued_at` or equivalent) is before `effective_at`. After `effective_at`, a verifier that accepts the succession expects `new_id`.
-- For a provider key, committee monitors accept settlement claims from `new_id` only after they have verified the succession, and only when `new_id` has signed no settlement claim, neither key is part of another succession, and `effective_at` is not earlier than the `period_end` of a claim the old key has already published. The new key continues the old key's claim chain, and settlement deposits keep carrying the chain's first key. Old receipts stay verifiable under `old_id`.
+- For a provider key, this time rule does not apply to submission receipts and settlement claims. A client MUST NOT reject a receipt because of it. A receipt is verified under the key that signed it, and it is paid when a settlement proof whose claim is signed by that same key settles. Which key signs a settlement claim is decided by the claim chain.
+- For a provider key, the first settlement claim signed by `new_id` names the succession by its `succession_id`, under the [claim rules](./03-economics.md#settlement). Committee monitors accept that claim only after they have verified the succession. They accept a provider succession under one rule:
+  - an old key has successions to one new key only. Another succession for the same `old_id` and `new_id` with a different `effective_at` is allowed and is not a conflict, because the claim names the one it uses;
+  - `new_id` is not the old or new key of a succession from a different old key, and it has signed no settlement claim before the claim that names the succession;
+  - a later succession from `new_id` to a third key is allowed.
+
+  The new key continues the old key's claim chain, and settlement deposits keep carrying the provider's first key. Old receipts stay verifiable under `old_id`.
 - For an author key, a succession is an advisory identity link. A client MAY present `new_id` as the continuation of `old_id` and MUST show that the link was asserted by the old key.
-- Two valid successions with the same `old_id` and different `new_id` values are a conflict. The link is then unresolved, and a client MUST NOT follow either automatically.
+- Two valid successions with the same `old_id` and different `new_id` values are a conflict. The link is then unresolved, and a client MUST NOT follow either automatically. Two successions with the same `old_id` and `new_id` and different `effective_at` values are not a conflict.
 - A succession cannot be withdrawn. It does not transfer provider balances, delegations or receipts.
 
 A succession does not recover a lost key, and a thief who holds the old key can publish one. It serves planned rotation by a provider or author who still controls the old key.

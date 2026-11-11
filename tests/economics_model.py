@@ -495,13 +495,14 @@ class Chain:
         return total
 
 
-def make_claim(key, network, leaves, start, end, declaration_id, previous=None):
+def make_claim(key, network, leaves, start, end, declaration_id, previous=None, succession=None):
     leaves = sort_leaves(leaves)
     root, total = tree_root(leaves)
     claim = {'provider_id': did(key), 'network': network,
              'sequence': 1 if previous is None else previous['sequence'] + 1,
              'previous_claim_id': None if previous is None else previous['claim_id'],
              'period_start': start, 'period_end': end, 'declaration_id': declaration_id,
+             'succession_id': None if succession is None else succession['succession_id'],
              'receipt_count': len(leaves), 'total_base_units': str(total),
              'cumulative_base_units': str(total + (0 if previous is None else int(previous['cumulative_base_units']))),
              'receipts_root': root}
@@ -516,12 +517,32 @@ def check_claim_object(claim):
     verify(claim['provider_id'], 'settlement-claim', without(claim, 'provider_signature'), claim['provider_signature'])
 
 
-def check_link(claim, previous, successors=None):
-    """Chain rules between a claim and its predecessor (None for sequence 1)."""
+def check_link(claim, previous, successions=None):
+    """Chain rules between a claim and its predecessor (None for sequence 1). They depend only on the two claims and on
+    the key succession the claim names, so nothing a provider signs later can change the result.
+    `successions` are the KeySuccession objects the verifier holds (a list, or a dict by succession_id).
+    Raises 'key' when the named succession is not held (that proves nothing) and 'succession' for a fault the objects show."""
     prior = 0 if previous is None else int(previous['cumulative_base_units'])
-    same_line = previous is None or previous['provider_id'] == claim['provider_id'] or (successors or {}).get(previous['provider_id']) == claim['provider_id']
-    if previous is not None and (not same_line or previous['network'] != claim['network']):
+    if previous is not None and previous['network'] != claim['network']:
         raise ValueError('key')
+    named = claim.get('succession_id')
+    if previous is None or previous['provider_id'] == claim['provider_id']:
+        if named is not None:
+            raise ValueError('succession')  # only the first claim signed by a new key names a succession
+    else:
+        if named is None:
+            raise ValueError('succession')  # another key without a named succession is not this chain
+        held = successions.values() if isinstance(successions, dict) else (successions or ())
+        s = next((x for x in held if x.get('succession_id') == named), None)
+        if s is None:
+            raise ValueError('key')
+        try:
+            check_succession(s)
+        except (ValueError, KeyError):
+            raise ValueError('key')
+        if ((s['old_id'], s['new_id']) != (previous['provider_id'], claim['provider_id'])
+                or not seconds(previous['period_end']) <= seconds(s['effective_at']) <= seconds(claim['period_start'])):
+            raise ValueError('succession')
     if not (claim['sequence'] == (1 if previous is None else previous['sequence'] + 1)
             and claim['previous_claim_id'] == (None if previous is None else previous['claim_id'])
             and int(claim['cumulative_base_units']) == prior + int(claim['total_base_units'])):
@@ -566,7 +587,7 @@ class Monitor:
     def __init__(self, key, trust, chain, schedules):
         self.key, self.trust, self.chain, self.schedules = key, trust, chain, schedules
         self.witnessed, self.seen, self.declarations, self.successors = {}, {}, {}, {}
-        self.followed, self.succession_at, self.holds = {}, {}, []
+        self.followed, self.successions, self.holds = {}, {}, []
         self.equivocations = []
 
     def line(self, provider_id):
@@ -585,26 +606,21 @@ class Monitor:
         """A provider succession is accepted only onto an unused key, so no deposit is counted for two chains."""
         check_succession(s)
         if self.successors.get(s['old_id']) == s['new_id']:
+            self.successions[s['succession_id']] = s  # the claim names the one it uses
             return
         new, involved = s['new_id'], set(self.successors) | set(self.successors.values())
         if s['old_id'] in self.successors or new in involved:
             raise ValueError('conflicting succession')
         if any(c['provider_id'] == new for c in self.witnessed.values()):
             raise ValueError('successor key already signed claims')
-        if any(c['provider_id'] == s['old_id'] and seconds(c['period_end']) > seconds(s['effective_at']) for c in self.witnessed.values()):
-            raise ValueError('succession dated before a claim the old key already published')
         self.successors[s['old_id']] = new
-        self.succession_at[s['old_id']] = s['effective_at']
+        self.successions[s['succession_id']] = s
 
     def register_declaration(self, d):
         if d['declaration_id'] != content_id('fyrd2', 'retention-declaration-id', without(d, 'declaration_id', 'provider_signature')):
             raise ValueError('declaration ID')
         verify(d['provider_id'], 'retention-declaration', without(d, 'provider_signature'), d['provider_signature'])
-        self.declarations.setdefault(self.line(d['provider_id']), []).append(d)
-
-    def governing_declaration(self, provider_id, period_start):
-        live = [d for d in self.declarations.get(self.line(provider_id), []) if seconds(d['effective_at']) <= seconds(period_start)]
-        return max(live, key=lambda d: seconds(d['effective_at']))['declaration_id'] if live else None
+        self.declarations[d['declaration_id']] = d
 
     def check(self, claim, leaves, seen_at, lateness=True):
         try:
@@ -617,24 +633,24 @@ class Monitor:
             known = [c for (line, net, seq), c in self.witnessed.items() if c['claim_id'] == claim['previous_claim_id']]
             raise Rejected('unknown_provider_key' if known else 'bad_chain')
         try:
-            check_link(claim, previous, self.successors)
+            check_link(claim, previous, self.successions)
         except ValueError as e:
-            raise Rejected({'key': 'unknown_provider_key', 'chain': 'bad_chain', 'period': 'bad_period'}[str(e)], str(e) != 'key')
-        signer = claim['provider_id']
-        if signer in self.succession_at and seconds(claim['period_end']) > seconds(self.succession_at[signer]):
-            raise Rejected('unknown_provider_key')  # the old key signs only periods that end by the succession
-        old = next((o for o, n in self.successors.items() if n == signer), None)
-        if old is not None and seconds(claim['period_start']) < seconds(self.succession_at[old]):
-            raise Rejected('unknown_provider_key')  # the new key signs only periods that start at or after it
+            raise Rejected({'key': 'unknown_provider_key', 'succession': 'unknown_provider_key', 'chain': 'bad_chain', 'period': 'bad_period'}[str(e)], str(e) != 'key')
         age = seconds(seen_at) - seconds(claim['period_end'])
         if age < 0 or (lateness and age > 90 * DAY):
             raise Rejected('bad_period')
-        if claim['declaration_id'] != self.governing_declaration(claim['provider_id'], claim['period_start']):
-            raise Rejected('bad_period')  # a provider can sign a declaration later, so this is never proof
-        if previous is not None and claim['declaration_id'] != previous['declaration_id']:
-            new = next(d for d in self.declarations[self.line(claim['provider_id'])] if d['declaration_id'] == claim['declaration_id'])
-            if seconds(new['effective_at']) < seconds(previous['period_end']):
-                raise Rejected('bad_period')  # a declaration cannot be backdated over periods already claimed
+        # The declaration rule depends only on the claim, its predecessor and the declaration the claim names.
+        if previous is not None and claim['declaration_id'] == previous['declaration_id']:
+            if claim['provider_id'] != previous['provider_id']:
+                raise Rejected('bad_period', True)  # a new key names a declaration it signed itself
+        else:
+            d = self.declarations.get(claim['declaration_id'])
+            if d is None:
+                raise Rejected('bad_period')  # an object this monitor has not fetched proves nothing
+            at = seconds(d['effective_at'])
+            if (d['provider_id'] != claim['provider_id'] or d['retention_seconds'] < YEAR or at > seconds(claim['period_start'])
+                    or (previous is not None and at < seconds(previous['period_end']))):
+                raise Rejected('bad_period', True)
         hashes = [leaf['receipt_hash'] for leaf in leaves]
         if leaves != sort_leaves(leaves) or len(set(hashes)) != len(hashes) or not 1 <= len(leaves) <= 10000:
             raise Rejected('bad_leaf', True)
@@ -718,7 +734,7 @@ class Monitor:
         w['witness_signature'] = sign(self.key, 'settlement-witness', w)
         return w
 
-    def takeover(self, candidates, outgoing_committee, at, holds=(), past_members=(), ancestors=()):
+    def takeover(self, candidates, outgoing_committee, at, holds=(), past_members=(), ancestors=(), successions=()):
         """Handover at one sequence. candidates: [(claim, leaves or None, committee witnesses held for it)]: the provider-signed
         claim objects gathered from every continuing monitor's page and any other source; `holds` are the continuing monitors' holds;
         `past_members` are earlier committee members whose witnesses also make a claim known.
@@ -744,7 +760,7 @@ class Monitor:
             known.add(claim['claim_id'])
             if len(outgoing) >= quorum(outgoing_committee):
                 chain = ancestors.get(claim['claim_id'], ()) if isinstance(ancestors, dict) else ancestors
-                return self.adopt(claim, witnesses, outgoing_committee, at, ancestors=chain)
+                return self.adopt(claim, witnesses, outgoing_committee, at, successions=successions, ancestors=chain)
             if leaves is None:
                 try:
                     check_claim_object(claim)
@@ -784,7 +800,7 @@ class Monitor:
     def adopt(self, claim, outgoing_witnesses, outgoing_committee, at, successions=(), ancestors=()):
         """Handover or catching up: adopt the claim that a quorum of a committee (the outgoing one, or the current one
         for a monitor that missed a sequence) witnessed. It checks the claim, its link, the witnesses and the deposits;
-        it does not re-apply lateness or leaf rules. `successions` are the key successions the adopted claims imply."""
+        it does not re-apply lateness or leaf rules. `successions` are the key successions the adopted claims name."""
         for s in successions:
             self.register_succession(s)
         slot = (self.line(claim['provider_id']), claim['network'], claim['sequence'])
@@ -803,7 +819,7 @@ class Monitor:
         chain = list(ancestors) + [claim]
         for older, newer in zip(chain, chain[1:]):
             check_claim_object(older)
-            check_link(newer, older, self.successors)
+            check_link(newer, older, self.successions)
         for older in ancestors:
             a_slot = (self.line(older['provider_id']), older['network'], older['sequence'])
             mine = self.witnessed.get(a_slot)
@@ -812,7 +828,7 @@ class Monitor:
                     self.equivocations.append((mine, older))
                 self.followed[a_slot] = older
             self.holds = [h for h in self.holds if (self.line(h['provider_id']), h['network'], h['sequence']) != a_slot]
-        check_link(claim, self.predecessor(slot[:2] + (claim['sequence'] - 1,)), self.successors)
+        check_link(claim, self.predecessor(slot[:2] + (claim['sequence'] - 1,)), self.successions)
         credit = self.chain.deposited(self.line(claim['provider_id']), claim['network'], self.trust) - int(claim['cumulative_base_units'])
         if credit < 0:
             raise ValueError('unfunded')
@@ -826,14 +842,31 @@ def committee_audit(monitors, claim, leaves, seen_at):
     return [r for kind, r in results if kind == 'witnessed'], [r for kind, r in results if kind == 'refused']
 
 
-def equivocation(a, b):
-    """True when two claims prove that a provider signed two claims at one sequence."""
+def equivocation_proof(a, b, predecessor=None, successions=()):
+    """An EquivocationProof: the two claims, the signed claim before them (None for sequence 1) and the successions they name."""
+    named = {a.get('succession_id'), b.get('succession_id')}
+    return {'claims': [a, b], 'predecessor': predecessor, 'successions': [s for s in successions if s['succession_id'] in named]}
+
+
+def equivocation(a, b, predecessor=None, successions=()):
+    """True when two claims prove that one provider chain has two claims at one sequence. The proof is self-verifying:
+    it needs only the two claims, the signed predecessor (None for sequence 1) and the key successions the claims name.
+    Each claim must follow the predecessor under the claim link rule, so a claim signed by an unrelated key that copies
+    an honest claim's previous_claim_id proves nothing."""
     try:
         check_claim_object(a); check_claim_object(b)
-    except ValueError:
+        if a['claim_id'] == b['claim_id'] or any(a[f] != b[f] for f in ('network', 'sequence', 'previous_claim_id')):
+            return False
+        if predecessor is None:
+            if a['provider_id'] != b['provider_id']:
+                return False
+        else:
+            check_claim_object(predecessor)
+        for claim in (a, b):
+            check_link(claim, predecessor, successions)
+    except (ValueError, KeyError, TypeError):
         return False
-    return (a['provider_id'] == b['provider_id'] and a['network'] == b['network'] and a['sequence'] == b['sequence']
-            and a['claim_id'] != b['claim_id'])
+    return True
 
 
 def make_proof(claim, leaves, index, witnesses=(), chain=()):
@@ -865,7 +898,7 @@ def proof_settles(receipt, proof, committee, previous_committee=(), changed_at=N
         witnessed = claim
         for later in proof.get('chain', []):  # a settled claim settles its ancestors
             check_claim_object(later)
-            check_link(later, witnessed, successions)  # same key, or a succession the verifier has verified
+            check_link(later, witnessed, successions)  # same key, or the succession the later claim names
             witnessed = later
     except (ValueError, KeyError, TypeError):
         return None

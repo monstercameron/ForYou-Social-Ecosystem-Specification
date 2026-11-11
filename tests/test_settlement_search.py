@@ -254,14 +254,17 @@ class ChainSearch(Search):
         signer = PROVIDER
         if self.rng.random() < 0.5:
             self.succession = em.key_succession(PROVIDER, em.PROVIDER_NEXT, '2027-01-13T00:00:00Z')
+            self.next_decl = em.retention_declaration(em.PROVIDER_NEXT, em.YEAR, '2027-01-13T00:00:00Z')
             signer = em.PROVIDER_NEXT
             for m in self.monitors.values():
+                m.register_declaration(self.next_decl)
                 m.register_succession(self.succession)
         self.children, self.parent = [], {}
         for k, (claim, _) in enumerate(self.claims):
             r = [em.make_receipt(self.btc, 'child %d %d' % (seed, k), '2027-01-14T06:00:00Z', key=signer)]
             child = em.make_claim(signer, NET, [em.leaf_of(x) for x in r], '2027-01-14T00:00:00Z', '2027-01-15T00:00:00Z',
-                                  self.decl['declaration_id'], previous=claim)
+                                  (self.decl if self.succession is None else self.next_decl)['declaration_id'], previous=claim,
+                                  succession=self.succession)
             self.children.append(child)
             self.parent[child[0]['claim_id']] = claim
         for m in self.faulty:
@@ -272,6 +275,7 @@ class ChainSearch(Search):
     def new_monitor(self):
         m = super().new_monitor()
         if self.succession is not None:
+            self.monitors[m].register_declaration(self.next_decl)
             self.monitors[m].register_succession(self.succession)
         return m
 

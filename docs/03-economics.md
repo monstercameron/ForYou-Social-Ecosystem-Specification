@@ -96,7 +96,7 @@ Settlement moves every collected fee to the Foundation and lets anyone check tha
 ### Settlement deposits
 
 - A provider funds its settlement account with on-chain transfers to the Foundation's [certified recipient](./06-governance.md#foundation-key-certificate) for the network. A deposit is at least 10,000 satoshis or 10^15 wei. A smaller transfer is not counted. The minimum lets small providers settle with occasional transfers instead of one per period.
-- Every deposit carries the 32-byte commitment `SHA256(P("settlement-deposit", {provider_id,network}))`. Here `provider_id` is the **first key** of the provider's claim chain, also after a key succession.
+- Every deposit carries the 32-byte commitment `SHA256(P("settlement-deposit", {provider_id,network}))`. Here `provider_id` is the provider's **first key**, the key it held before any key succession. This holds on every network, also on a network where the provider's first claim is signed by a later key.
   - On Bitcoin the transaction MUST contain exactly one `OP_RETURN` output whose data is exactly those bytes, in addition to the payment output.
   - On Ethereum the transaction input data MUST be exactly those bytes, and the recipient MUST be an address with no contract code and no delegation designation.
 - A deposit counts when all of these hold:
@@ -106,7 +106,12 @@ Settlement moves every collected fee to the Foundation and lets anyone check tha
 - A deposit is credited in base units: satoshis times 1,000, or wei.
 - `deposited(p, network)` is the sum of all counted deposits carrying provider p's commitment. Anyone can compute it from the chain.
 - Deposited credit is not refundable and has no expiry. It belongs to the chain, not to a key. After a provider [key succession](./02-protocol.md#key-succession), the new key signs the next claims of the same chain, and deposits keep carrying the first key's commitment.
-- Monitors accept a provider succession when `new_id` has signed no claim of any chain and neither key is part of another succession. Deposits carrying the new key's own commitment are never counted for this chain. Nothing a third party sends can therefore affect a succession, and no deposit is counted for two chains.
+- Monitors accept a provider succession under one rule:
+  - an old key has successions to one new key only. Another succession for the same old and new key with a different `effective_at` is allowed and is not a conflict, because the claim names the one it uses;
+  - the new key is not the old or new key of a succession from a different old key, and it has signed no settlement claim before the claim that names the succession;
+  - a later succession from the new key to a third key is allowed.
+
+  Deposits carrying the new key's own commitment are never counted for this chain. Nothing a third party sends can therefore affect a succession, and no deposit is counted for two chains.
 
 ### Claims and leaves
 
@@ -118,7 +123,7 @@ SettlementLeaf = {receipt_hash, schedule_id, amount_base_units, issued_at}
 
 `receipt_hash` is the lowercase SHA256 hex of the UTF-8 JCS bytes of the complete SubmissionReceipt, including its signature. A leaf therefore binds one exact receipt without revealing its message.
 
-A `SettlementClaim` is `{claim_id,provider_id,network,sequence,previous_claim_id,period_start,period_end,declaration_id,receipt_count,total_base_units,cumulative_base_units,receipts_root,provider_signature}`.
+A `SettlementClaim` is `{claim_id,provider_id,network,sequence,previous_claim_id,period_start,period_end,declaration_id,succession_id,receipt_count,total_base_units,cumulative_base_units,receipts_root,provider_signature}`.
 
 | Field | Rule |
 | --- | --- |
@@ -127,7 +132,8 @@ A `SettlementClaim` is `{claim_id,provider_id,network,sequence,previous_claim_id
 | `sequence` | 1 for the provider's first claim on the network, then increasing by exactly one |
 | `previous_claim_id` | null for sequence 1, otherwise the `claim_id` of the preceding claim |
 | `period_start`, `period_end` | Half-open UTC interval of at most 24 hours. `period_start` is not earlier than the previous claim's `period_end`. Gaps are allowed; a period with no receipts needs no claim |
-| `declaration_id` | The provider's [RetentionDeclaration](#provider-retention) with the greatest `effective_at` not later than `period_start`. It governs every receipt in the claim. A claim MUST name the same declaration as the previous claim unless the new declaration's `effective_at` is not earlier than the previous claim's `period_end`, so a declaration cannot be backdated over periods already claimed |
+| `declaration_id` | A [RetentionDeclaration](#provider-retention) signed by the claim's own `provider_id`. It governs every receipt in the claim. A claim names either the same declaration as the previous claim, or one whose `effective_at` is not earlier than the previous claim's `period_end` and not later than this claim's `period_start`. For sequence 1 only the second bound applies. A declaration therefore takes effect on a chain when a claim first names it, and it cannot be backdated over periods already claimed |
+| `succession_id` | null, except on the first claim signed by a new provider key. That claim names the [KeySuccession](./02-protocol.md#key-succession) from the previous claim's key to its own. The succession's `effective_at` is not earlier than the previous claim's `period_end` and not later than this claim's `period_start` |
 | `receipt_count` | Number of leaves, 1 to 10,000. A busier provider uses shorter periods |
 | `total_base_units` | Sum of the leaves' amounts |
 | `cumulative_base_units` | The previous claim's `cumulative_base_units` plus `total_base_units` |
@@ -148,13 +154,16 @@ The leaves form a Merkle sum tree, so that an inclusion proof also proves that t
 - `receipts_root` is the root hash in lowercase hexadecimal, and `total_base_units` MUST equal the root sum.
 - An audit path lists the sibling nodes `{hash,sum}` from the leaf up to the root. Whether each sibling is the left or the right child follows from `leaf_index` and `receipt_count` by the same split rule.
 
-A receipt is claimed by the key that issued it. A key succession splits the chain in time at its `effective_at`:
+A receipt is claimed by the key that issued it. A provider that changes its key signs a key succession and cuts its period at the succession's `effective_at`:
 
-- the old key signs the claims for periods that end at or before that instant, covering every receipt it issued;
-- the new key signs the claims for periods that start at or after it;
-- a provider cuts its period at that instant.
+- an honest provider stops issuing receipts with the old key at the succession;
+- the old key signs the claims that cover every receipt it issued. It may sign claims until the first claim signed by the new key;
+- the first claim signed by the new key names the succession in `succession_id`, and names a retention declaration signed by the new key;
+- from that claim on, the chain belongs to the new key. Monitors refuse as `unknown_provider_key` a claim signed by a key other than the previous claim's key, unless it names a succession from that key to its own.
 
-Monitors refuse a claim signed by the wrong key for its period as `unknown_provider_key`. They also refuse a succession whose `effective_at` is earlier than the `period_end` of a claim the old key has already published.
+Monitors accept the succession under the rule in [settlement deposits](#settlement-deposits). Which key signs a claim is decided by the claim chain, not by the time rule for signatures in [key succession](./02-protocol.md#key-succession). A receipt is verified under the key that signed it, and it is paid when a settlement proof whose claim is signed by that same key settles.
+
+The declaration and succession rules depend only on the claim, the claim before it and the object the claim names by its content ID. Nothing a provider signs later can change whether a claim satisfies them. This is what lets anyone prove such a fault, and it is used in the [handover](#the-settlement-committee) below.
 
 A claim is **funded** when `deposited(p, network) >= cumulative_base_units`. A provider MUST deposit enough before it publishes a claim. Claims are published documents, not chain transactions, so daily claims cost nothing on-chain.
 
@@ -166,10 +175,10 @@ Settlement is decided by one body under one rule. The body is the **settlement c
 
 Each committee monitor audits every claim a provider publishes, on its own, from public data:
 
-- the `claim_id`, the provider signature, and the provider key (the key of the previous claim, or its successor under a [key succession](./02-protocol.md#key-succession) the monitor has verified);
+- the `claim_id`, the provider signature, and the provider key (the key of the previous claim, or its successor under the [key succession](./02-protocol.md#key-succession) the claim names, which the monitor has fetched and verified);
 - the sequence, `previous_claim_id` and `cumulative_base_units` against the claim it witnessed at the previous sequence;
 - the period rules, and that it first saw the claim not earlier than `period_end` and not more than 90 days after it;
-- that `declaration_id` is the governing declaration under the rule above;
+- that `declaration_id` and `succession_id` satisfy the rules above, using the objects they name;
 - every leaf rule, and that no `receipt_hash` appears in an earlier claim of that provider;
 - the recomputed root, count and total;
 - that the claim is funded on the chain: `deposited(p, network) >= cumulative_base_units`.
@@ -185,6 +194,7 @@ A monitor MUST NOT refuse for any other reason, and in particular not because of
 - A monitor MUST audit a refused claim again when it obtains public data it lacked (a schedule, declaration or succession it had not yet fetched).
 - A later witness supersedes its refusal.
 - For a real fault the provider publishes a corrected claim with the same `sequence`.
+- A provider MUST NOT replace a claim whose only problem is funding or an object not yet published. It deposits enough or publishes the object instead.
 
 A monitor serves what it signed at `GET /v1/witnesses?provider_id={did}&network={network}&after_sequence={n}`. The response is a `MonitorWitnessesPage` `{witnesses,refusals,holds,claims}`, where `claims` are the signed claim objects its witnesses and holds refer to. The monitor delivers each witness to the provider with `POST /v1/settlement-witnesses` (201 new, 200 already held, 404 `not_found` for an unknown claim, 422 `invalid_message`).
 
@@ -194,7 +204,13 @@ A monitor serves what it signed at `GET /v1/witnesses?provider_id={did}&network=
 
 **One witness per sequence, and it is final.** A monitor witnesses at most one claim for a given provider, network and `sequence`. It never withdraws or replaces that witness. It audits a second, different claim at that sequence only if it refused the first. A monitor that witnessed the first refuses every other claim at that sequence with reason `bad_chain`.
 
-Two different claims are proof of **equivocation** when the same provider signed both for the same network and `sequence`, each passes the audit, and a committee monitor has witnessed at least one of them. A monitor that holds such a proof publishes it at `GET /v1/equivocations?provider_id={did}` (an `EquivocationsPage` `{proofs}`, each proof being the two signed claims). A provider that equivocates can leave a sequence with no quorum. That chain then cannot continue. The remedy is the provider's own: a new provider key and a new chain.
+Two different claims at one sequence of one provider chain are **equivocation**. A monitor that holds two such claims, each of which passes the audit and at least one of which a committee monitor has witnessed, publishes a proof at `GET /v1/equivocations?provider_id={did}`. The response is an `EquivocationsPage` `{proofs}`. Each proof is an `EquivocationProof` `{claims,predecessor,successions}`: the two signed claims, the signed claim at the previous sequence (null for sequence 1) and every `KeySuccession` the two claims name. Anyone can check a proof without trusting the monitor. It is valid when:
+
+- both claims verify, and they have the same `network`, `sequence` and `previous_claim_id` and different `claim_id` values;
+- for sequence 1, both have the same `provider_id`;
+- otherwise `predecessor` verifies, and each claim follows it under the rules above for `sequence`, `previous_claim_id`, the period, `cumulative_base_units` and `succession_id`. In particular its provider key is the predecessor's key with a null `succession_id`, or follows from it by the succession the claim names.
+
+A claim signed by an unrelated key that copies an honest claim's `previous_claim_id` is therefore not a proof. A provider that equivocates can leave a sequence with no quorum. That chain then cannot continue. The remedy is the provider's own: a new provider key and a new chain.
 
 A claim is **settled** when a **quorum** of the committee has witnessed it or a later claim that chains from it. A quorum is more than two-thirds of the committee: 4 of 5, 5 of 7. Any two quorums share more than one-third of the committee. Two different claims at one sequence can therefore both be settled only if more than one-third of the monitors each signed both, against the rule above.
 
@@ -214,26 +230,29 @@ A newly named monitor takes over the settled history instead of re-deciding it. 
 
 Then, sequence by sequence:
 
-- where a quorum of the outgoing committee witnessed one claim, it adopts that claim as in catching up, together with the key successions the adopted claims imply;
+- where a quorum of the outgoing committee witnessed one claim, it adopts that claim as in catching up, together with the key successions the adopted claims name;
 - where it knows of committee witnesses but no quorum, it may witness a claim only if two conditions hold. The claim passes its audit (all the committee checks except the first-seen lateness rule), **and every other claim it knows of at that sequence is proven invalid by facts that cannot change**. Such facts are:
   - a bad signature or `claim_id`;
   - a broken link to the adopted predecessor;
   - a period longer than 24 hours or overlapping the predecessor's;
-  - leaves that show a bad leaf under a release-approved schedule, bad totals or a duplicate receipt.
+  - leaves that show a bad leaf under a release-approved schedule, bad totals or a duplicate receipt;
+  - a `declaration_id` or `succession_id` that breaks its rule, shown by the claim, the adopted predecessor and the object the claim names.
 
-  Nothing a provider can sign later counts as proof, so a fault in the named declaration or the signing key does not. Nor does a claim whose leaves the newcomer cannot obtain, or one that fails only for funding, for a period that has not ended, or for data the newcomer lacks. A newcomer **knows of** a claim only when it holds the provider-signed claim object itself and either a witness for it from a present or past committee member or a hold (below) from a continuing monitor. A witness or hold for a claim whose signed object nobody produces is ignored, so a faulty monitor cannot block a chain with a claim that does not exist;
+  Each of these is fixed by the claim, the adopted predecessor and objects named by content ID or approved by the release keys. Nothing a provider signs later can create such a proof or remove it. A claim is not proven invalid when the newcomer cannot obtain its leaves or an object it names, or when it fails only for funding, for a period that has not ended, or for a key the monitor does not accept as the chain's successor. A newcomer **knows of** a claim only when it holds the provider-signed claim object itself and either a witness for it from a present or past committee member or a hold (below) from a continuing monitor. A witness or hold for a claim whose signed object nobody produces is ignored, so a faulty monitor cannot block a chain with a claim that does not exist;
 - when it therefore witnesses nothing at a sequence, it publishes a signed `SettlementHold` `{witness_id,provider_id,network,sequence,claim_ids,held_at,witness_signature}` under P("settlement-hold", the hold excluding `witness_signature`). The hold lists every claim it knows of there (at most 64). The monitor serves it together with those signed claim objects. A hold stands until all but one of its claims are proven invalid. Holds make a block durable: a monitor named later sees the holds and claim objects of the continuing monitors and is bound by the same rule. A claim therefore cannot be completed by waiting for a second committee change. An honest provider's correction of a claim with a provable fault is not blocked. A provider that published two claims that are not provably invalid leaves the sequence unsettled unless the outgoing committee completes a quorum;
 - where no outgoing witness exists, it audits normally.
 
 It adopts the history published before `effective_at` by that instant, since the policy is announced at least 14 days ahead. For any sequence at which it knows of a claim whose `period_end` is earlier than `effective_at`, it waits until 48 hours after `effective_at`. It then fetches the continuing monitors' pages again, and only then applies the rules above. This covers every witness an outgoing monitor signed before the change. Monitors publish as they sign, and at least one honest monitor that witnessed any outgoing-quorum claim stays on the committee and serves its page. A newcomer therefore always learns of that claim before it could witness a different one at its sequence. Handover trusts a quorum of the outgoing committee once more, for the history it hands over.
 
-**Known limit of the handover.** The rules above keep settlement safe across committee changes under the stated assumption. The price is liveness in one case:
+**What can still block a sequence.** Every fault that the claim, its predecessor and the objects it names can show is provable. A committee change therefore never blocks an honest provider's correction of such a fault, even when a faulty monitor witnessed the faulty claim. A sequence is left without a quorum across a handover only by the provider's own doing:
 
-1. a provider publishes a claim whose fault is not provable (for example a wrong `declaration_id`);
-2. it then publishes the correction;
-3. a committee change takes effect before the correction has reached a quorum, while a monitor holds a witness for the first claim.
+- it published two claims that both pass the audit (equivocation);
+- it published a different claim at a sequence instead of funding the one it published;
+- it withholds the leaves, or an object named by a claim, for a claim that a monitor witnessed;
+- it published a claim that names a declaration or succession that does not exist. No proof of its absence can exist; or
+- it named a succession onto a key that had already signed a settlement claim or is part of a succession from a different old key.
 
-The newcomers then hold both claims and witness neither. That sequence then settles only if the outgoing committee completes a quorum for the correction during the handover. A provider avoids this by not publishing claims in the 48 hours before an announced committee change, which is always known at least 14 days ahead. The handover is the newest part of this design and the part that most needs independent review before any deployment.
+The remedy is then the provider's own, as for equivocation: a new provider key and a new chain. The handover is the newest part of this design and the part that most needs independent review before any deployment.
 
 ### Proofs and receipt states
 
@@ -246,7 +265,7 @@ A verifier holding a receipt:
    - the next `sequence`;
    - the same `network`;
    - a cumulative total increased by its own total;
-   - the same `provider_id`, or the successor of it under a `KeySuccession` the verifier has verified.
+   - the same `provider_id` and a null `succession_id`, or a `succession_id` naming a `KeySuccession` from the earlier claim's key to its own. The verifier fetches and verifies that succession, and requires its `effective_at` to be not earlier than the earlier claim's `period_end` and not later than this claim's `period_start`.
 
    It then takes the last claim of `chain` as the witnessed claim in step 4;
 3. recomputes the root node from the leaf and `audit_path`, and requires its hash to equal `receipts_root` and its sum to equal `total_base_units`;
@@ -343,7 +362,7 @@ Each provider chooses how long it retains records and declares it.
 `RetentionDeclaration` is `{declaration_id,provider_id,retention_seconds,payout_recipients,effective_at,provider_signature}`. `declaration_id` is `fyrd2:` plus lowercase SHA256 hex of P("retention-declaration-id", the declaration excluding `declaration_id` and `provider_signature`). The signature covers P("retention-declaration", the declaration excluding `provider_signature`). `payout_recipients` is an object with an optional recipient per supported network. `GET /v1/retention` returns a `RetentionDeclarationsPage` `{declarations}`, newest first.
 
 - `retention_seconds` MUST be at least 31536000 (one year). There is no maximum.
-- A record's governing declaration is the one named by the settlement claim that contains its receipt. Its `retain_until` is the receipt `issued_at` plus that declaration's `retention_seconds`. Until that claim exists, the provider's newest declaration with `effective_at` not later than `issued_at` applies provisionally. A declaration cannot be backdated, for three reasons: a claim names it, monitors refuse a claim whose period has not ended, and a declaration cannot take effect inside a period already claimed.
+- A record's governing declaration is the one named by the settlement claim that contains its receipt. Its `retain_until` is the receipt `issued_at` plus that declaration's `retention_seconds`. Until that claim exists, the provider keeps the record. A reader can rely on a retention period only once the claim that names the declaration exists. A provider SHOULD name its newest declaration that fits the claim; the one the claim names governs. A declaration cannot be backdated, for three reasons: a claim names it, monitors refuse a claim whose period has not ended, and a declaration cannot take effect inside a period already claimed.
 - A new declaration applies to later claims only. A provider MAY keep any record longer than it declared. It MUST NOT drop a record before its `retain_until`.
 - Until `retain_until`, the provider MUST keep one complete, independently verifiable copy and serve it on the public read routes, subject to provider-local legal restrictions.
 - After `retain_until`, the provider MAY drop the record. A dropped record returns 410 `retention_expired` on direct retrieval and is omitted from listings.
