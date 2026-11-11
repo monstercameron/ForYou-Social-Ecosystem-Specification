@@ -1,0 +1,110 @@
+{
+  "status": "SYNTHETIC NON-PRODUCTION EXAMPLE; not measured revenue or a solvency claim",
+  "reporting_currency": "hypothetical units",
+  "assumptions": {
+    "monthly_users": 1000,
+    "earned_net_price_per_user": 10,
+    "fixed_cost": 3000,
+    "storage_cost": 1000,
+    "baseline_read_gib": 1000,
+    "public_read_cap_gib": 2000,
+    "egress_cost_per_gib": 0.1,
+    "moderation_cost": 500,
+    "reserve_replenishment": 1000,
+    "reserve_value": 20000,
+    "reserve_requirement": 15000
+  },
+  "scenarios": {
+    "baseline": {
+      "overrides": {},
+      "result": {
+        "earned_revenue": 10000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": 4400.0,
+        "reserve_adequate": true
+      }
+    },
+    "tenfold_reads": {
+      "overrides": {
+        "read_factor": 10
+      },
+      "result": {
+        "earned_revenue": 10000,
+        "delivered_gib": 2000,
+        "unserved_gib": 8000,
+        "operating_surplus": 4300.0,
+        "reserve_adequate": true
+      }
+    },
+    "fivefold_abuse": {
+      "overrides": {
+        "abuse_factor": 5
+      },
+      "result": {
+        "earned_revenue": 10000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": 2400.0,
+        "reserve_adequate": true
+      }
+    },
+    "half_payers": {
+      "overrides": {
+        "users": 500
+      },
+      "result": {
+        "earned_revenue": 5000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": -600.0,
+        "reserve_adequate": true
+      }
+    },
+    "half_reserve_value": {
+      "overrides": {
+        "reserve_value": 10000
+      },
+      "result": {
+        "earned_revenue": 10000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": 4400.0,
+        "reserve_adequate": false
+      }
+    },
+    "double_storage_cost": {
+      "overrides": {
+        "storage_factor": 2
+      },
+      "result": {
+        "earned_revenue": 10000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": 3400.0,
+        "reserve_adequate": true
+      }
+    },
+    "combined_downside": {
+      "overrides": {
+        "users": 500,
+        "storage_factor": 2,
+        "abuse_factor": 5
+      },
+      "result": {
+        "earned_revenue": 5000,
+        "delivered_gib": 1000,
+        "unserved_gib": 0,
+        "operating_surplus": -3600.0,
+        "reserve_adequate": true
+      }
+    }
+  },
+  "not_modeled": [
+    "subcontractor failure and actual restore costs",
+    "tax/regulatory-specific costs",
+    "real reserve valuations",
+    "actual willingness to pay",
+    "full correlated cost distribution"
+  ]
+}

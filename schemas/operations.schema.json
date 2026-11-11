@@ -1,0 +1,512 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://foryousocial.network/schemas/operations.schema.json",
+  "title": "Operations 1.0 schema library",
+  "description": "Reference a named definition. Structural validation does not validate signatures, legal compliance, reserves, path safety or inter-field equality.",
+  "$defs": {
+    "ServiceOffer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "service_offer_id",
+        "max_message_bytes",
+        "max_content_bytes_per_message",
+        "retention_seconds",
+        "read_bytes_per_message",
+        "discovery_requests_per_message",
+        "replica_count",
+        "availability_target_basis_points",
+        "export_grace_seconds",
+        "terms_digest",
+        "signature"
+      ],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "service_offer_id": {
+          "type": "string",
+          "pattern": "^fyso1:[0-9a-f]{64}$"
+        },
+        "max_message_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1048576
+        },
+        "max_content_bytes_per_message": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "retention_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "read_bytes_per_message": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "discovery_requests_per_message": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "replica_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "availability_target_basis_points": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "export_grace_seconds": {
+          "type": "integer",
+          "minimum": 2592000,
+          "maximum": 9007199254740991
+        },
+        "terms_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "RenewalQuote": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quote_id",
+        "provider_id",
+        "author_id",
+        "plan_id",
+        "service_offer_id",
+        "target_message_id",
+        "added_seconds",
+        "units_charge",
+        "expires_at",
+        "signature"
+      ],
+      "properties": {
+        "quote_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "provider_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "author_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "plan_id": {
+          "type": "string",
+          "pattern": "^fyp1:[0-9a-f]{64}$"
+        },
+        "service_offer_id": {
+          "type": "string",
+          "pattern": "^fyso1:[0-9a-f]{64}$"
+        },
+        "target_message_id": {
+          "type": "string",
+          "pattern": "^fy1:[0-9a-f]{64}$"
+        },
+        "added_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "units_charge": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "RenewalOrder": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "quote",
+        "authorization"
+      ],
+      "properties": {
+        "quote": {
+          "$ref": "#/$defs/RenewalQuote"
+        },
+        "authorization": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "OperatorManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operator_id",
+        "manifest_version",
+        "issued_at",
+        "expires_at",
+        "service_roles",
+        "service_endpoints",
+        "supported_profiles",
+        "policy_url",
+        "policy_digest",
+        "legal_contact",
+        "abuse_contact",
+        "privacy_contact",
+        "appeal_url",
+        "markets_assessed",
+        "signature"
+      ],
+      "properties": {
+        "operator_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "manifest_version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "service_roles": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ingress",
+              "storage",
+              "index",
+              "client",
+              "ranking",
+              "sync",
+              "payments"
+            ]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "service_endpoints": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://"
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "supported_profiles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        },
+        "policy_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "policy_digest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "legal_contact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "abuse_contact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "privacy_contact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "appeal_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://"
+        },
+        "markets_assessed": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "ExportEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "media_type",
+        "byte_length",
+        "sha256",
+        "category"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "byte_length": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "category": {
+          "enum": [
+            "public_message",
+            "public_content",
+            "private_state",
+            "local_preferences",
+            "service_evidence"
+          ]
+        }
+      }
+    },
+    "ExportManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "author_id",
+        "created_at",
+        "entries",
+        "signature"
+      ],
+      "properties": {
+        "profile": {
+          "const": "ForYouExport-1"
+        },
+        "author_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExportEntry"
+          },
+          "uniqueItems": true,
+          "maxItems": 10000,
+          "minItems": 1,
+          "contains": {
+            "type": "object",
+            "required": [
+              "category"
+            ],
+            "properties": {
+              "category": {
+                "const": "local_preferences"
+              }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        "signature": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{86}$"
+        }
+      }
+    },
+    "Preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "followed_author_ids",
+        "muted_author_ids",
+        "blocked_author_ids",
+        "bookmarked_message_ids",
+        "ranking_preferences"
+      ],
+      "properties": {
+        "profile": {
+          "const": "ForYouPreferences-1"
+        },
+        "followed_author_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+          },
+          "uniqueItems": true
+        },
+        "muted_author_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+          },
+          "uniqueItems": true
+        },
+        "blocked_author_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+          },
+          "uniqueItems": true
+        },
+        "bookmarked_message_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^fy1:[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        },
+        "ranking_preferences": {
+          "type": "object"
+        }
+      }
+    },
+    "ServiceChallenge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "challenge",
+        "service_id",
+        "author_id",
+        "method",
+        "resource",
+        "body_hash",
+        "expires_at"
+      ],
+      "properties": {
+        "challenge": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "service_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "author_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "method": {
+          "enum": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "resource": {
+          "type": "string",
+          "pattern": "^/v1/[^?#]+$"
+        },
+        "body_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        }
+      }
+    },
+    "InvoiceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "author_id",
+        "plan_id",
+        "request_id"
+      ],
+      "properties": {
+        "provider_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "author_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "plan_id": {
+          "type": "string",
+          "pattern": "^fyp1:[0-9a-f]{64}$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        }
+      }
+    },
+    "ExportRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "author_id",
+        "request_id"
+      ],
+      "properties": {
+        "author_id": {
+          "type": "string",
+          "pattern": "^did:key:z6Mk[1-9A-HJ-NP-Za-km-z]+$"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        }
+      }
+    }
+  }
+}

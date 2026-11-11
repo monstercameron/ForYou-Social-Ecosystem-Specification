@@ -1,0 +1,14 @@
+{
+  "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
+  "max_message_bytes": 1048576,
+  "max_content_bytes_per_message": 33554432,
+  "retention_seconds": 2592000,
+  "read_bytes_per_message": 104857600,
+  "discovery_requests_per_message": 100,
+  "replica_count": 2,
+  "availability_target_basis_points": 9900,
+  "export_grace_seconds": 2592000,
+  "terms_digest": "795d9317d2826a18e49eeead2e825dc725c6a39530cbfeb31e9cab60503b70cf",
+  "service_offer_id": "fyso1:b5d12a7689b39893c55739b0dffa1433f878daf040bffcc5bffdb3548a4d9b32",
+  "signature": "fRza-4o5rE-aY7cYtzyCZ8RZrF13_NXbrUWG-8ESi-faE9UgFHgvaE1WVxoy4-keMujqjeEnHPWV-6_bmgG2AA"
+}
