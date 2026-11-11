@@ -2778,7 +2778,7 @@
           "$ref": "#/$defs/FinancialPositiveAmount"
         },
         "recipient": {
-          "oneOf": [
+          "anyOf": [
             {
               "type": "string",
               "minLength": 26,
@@ -2829,7 +2829,7 @@
           "$ref": "#/$defs/FinancialPositiveAmount"
         },
         "recipient": {
-          "oneOf": [
+          "anyOf": [
             {
               "type": "string",
               "minLength": 26,

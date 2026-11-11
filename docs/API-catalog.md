@@ -122,11 +122,13 @@ The owning route contract takes precedence. Error bodies are the closed `PublicR
 | 402 | `insufficient_balance` on admission or withdrawal. |
 | 403 | Disclosable restriction: `policy_restricted`, `legal_restricted` or `restricted`; or `delegation_revoked` on admission. Takes precedence over 410. |
 | 404 | Unknown or nondisclosable object: `not_found`. Not proof of global absence. |
-| 409 | State conflict: `id_collision`, `not_ready`, `export_invalidated`, `quote_conflict`, `stale_state`, `request_conflict`. |
+| 409 | State conflict: `id_collision`, `not_ready`, `export_invalidated`, `quote_conflict`, `stale_state`, `request_conflict`. `not_ready` means a precondition is not met yet: export bytes requested while the job is preparing, a vault delivery whose receipt is not yet settled, or a display name published by an author with no accepted public post at that holder. |
 | 410 | `retention_expired` for a post whose declared provider retention ended, or `export_expired` for an export job. The record may still be in the Lifetime Vault. |
 | 416 | `range_not_satisfiable`: an export chunk offset exceeds the authorized total. |
 | 422 | Semantic rejection before any debit: `id_mismatch`, `message_too_large`, `invalid_message`, `quote_expired`, `bad_authorization`. |
 | 429 | A disclosed rate or work limit: `rate_limited`. |
 | 503 | Unavailable service, state or capacity: `unavailable`. Never a manufactured success. |
+
+The schema's status list also contains `too_large`. No route in release 1.0 returns it; it is reserved, and a server MUST NOT send it.
 
 Public restriction bodies and disclosure limits are defined in [shared signals](./04-compliance.md#shared-signals-and-legal-restrictions). Rate limits MUST NOT silently alter filters or produce empty successful results.

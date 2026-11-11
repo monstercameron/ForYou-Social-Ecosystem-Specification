@@ -1285,6 +1285,14 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual(self.entry(self.run_quarter([big], {A: [10 * em.YEAR, em.YEAR]}, {A: self.full(9000)}, previous=self.before(40)))['retention_years'], 1)
         self.assertEqual(self.entry(self.run_quarter([big], {A: [100 * em.YEAR]}, {A: self.full(9000)}, previous=self.before(40)))['retention_years'], 10)
 
+    def test_proven_quarters_survive_a_quarter_without_an_entry(self):
+        big = self.big_attestation()
+        skipped = {'entries': []}  # no settled fees and no accrued balance last quarter
+        back = self.entry(self.run_quarter([big], {A: [10 * em.YEAR]}, {A: self.full(9000)}, previous=skipped, earlier=[self.before(7)]))
+        self.assertEqual((back['proven_quarters'], back['retention_years']), (8, 3))
+        newer = self.entry(self.run_quarter([big], {A: [10 * em.YEAR]}, {A: self.full(9000)}, previous=skipped, earlier=[self.before(2), self.before(7)]))
+        self.assertEqual(newer['proven_quarters'], 3)  # the most recent entry counts
+
     def test_new_provider_is_scored_on_the_days_it_was_active(self):
         self.assertIsNone(em.monitor_score([(60, 90, 9000)]))  # 30 days is not enough for an established provider
         self.assertEqual(em.monitor_score([(60, 90, 9000)], active_days=30), 9000)  # but covers a provider that started 30 days ago
@@ -1373,6 +1381,9 @@ class RetentionAndKeyTests(unittest.TestCase):
         structural('WithdrawalRequest', request)
         status = dict(request, status='pending', transfer=None, updated_at=NOW, provider_signature='A' * 86)
         structural('WithdrawalStatus', status)
+        ethereum = 'ethereum-mainnet'  # every Ethereum address is also alphanumeric, so the address union must not be exclusive
+        structural('WithdrawalRequest', dict(request, network=ethereum, recipient=em.RECIPIENTS[ethereum]))
+        structural('WithdrawalStatus', dict(status, network=ethereum, recipient=em.RECIPIENTS[ethereum]))
         for kind, bad in (('WithdrawalRequest', dict(request, amount_base_units='0')), ('WithdrawalRequest', dict(request, recipient='not an address!')),
                           ('WithdrawalStatus', dict(status, status='cancelled'))):
             with self.assertRaises(jsonschema.ValidationError):

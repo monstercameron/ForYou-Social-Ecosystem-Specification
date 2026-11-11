@@ -736,7 +736,8 @@ class Monitor:
 
     def takeover(self, candidates, outgoing_committee, at, holds=(), past_members=(), ancestors=(), successions=()):
         """Handover at one sequence. candidates: [(claim, leaves or None, committee witnesses held for it)]: the provider-signed
-        claim objects gathered from every continuing monitor's page and any other source; `holds` are the continuing monitors' holds;
+        claim objects gathered from every continuing monitor's page and any other source; `holds` are the holds it has from members of the
+        outgoing committee (the continuing monitors' pages and any departed member's holds);
         `past_members` are earlier committee members whose witnesses also make a claim known.
         Returns a witness, or None when it must witness nothing (it then publishes a hold).
         A claim blocks unless it is PROVEN invalid from the claim and public objects the newcomer holds."""
@@ -1044,12 +1045,16 @@ MIN_PAYOUT = {'bitcoin-mainnet': 10000 * 1000, 'ethereum-mainnet': 10 ** 15}
 PAYOUT_UNIT = {'bitcoin-mainnet': 1000, 'ethereum-mainnet': 1}
 
 
-def distribute(policy, network, start, end, settled_claims, declared_seconds, reports, previous=None, recipients=(), payouts=None, report_ids=None, active_days=None, complete_monitors=None, monitor_answers=None, key=FOUNDATION):
+def distribute(policy, network, start, end, settled_claims, declared_seconds, reports, previous=None, recipients=(), payouts=None, report_ids=None, active_days=None, complete_monitors=None, monitor_answers=None, key=FOUNDATION, earlier=()):
     """settled_claims: the claims counted in the quarter (period_end inside it). declared_seconds: provider -> retention_seconds of the
     declarations its claims named. reports: provider -> {monitor_id: [(first_day, end_day, score)]}.
-    previous: the previous quarter's statement (for proven_quarters and accrued amounts)."""
+    previous: the previous quarter's statement; earlier: the statements before it, most recent first. A provider's proven_quarters
+    and accrued amount are carried from the most recent of these that has an entry for it."""
     keep = 10000 - policy['vault_share_bp']
-    before = {e['provider_id']: e for e in (previous or {}).get('entries', [])}
+    before = {}
+    for statement in (previous, *earlier):
+        for e in (statement or {}).get('entries', []):
+            before.setdefault(e['provider_id'], e)
     fees = {}
     for a in settled_claims:
         if not seconds(start) <= seconds(a['period_end']) < seconds(end):
