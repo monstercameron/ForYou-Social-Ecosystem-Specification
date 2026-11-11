@@ -2,6 +2,9 @@
 
 Date: 2026-11-11. This is a nonnormative review record, not a second specification.
 
+
+This record describes the earlier consolidation snapshot. The subsequent text-only/CDN revision and its validation are recorded in [the external-media review](./text-only-media-review.md); counts and retained retrieval contracts below are historical.
+
 ## Consolidation
 
 The current specification consists of seven documents listed in [the documentation index](../docs/README.md). The former concept documents, historical override notices, obsolete examples and successive audit reports have been removed from the active repository documentation. A pre-consolidation snapshot was preserved outside the repository before removal; original tracked history also remains in Git.

@@ -9,7 +9,8 @@ from test_security_profile import ROOT, I, M
 class ConsolidationTests(unittest.TestCase):
     def test_one_document_set(self):
         expected={'README.md','01-overview.md','02-protocol.md','03-economics.md',
-                  '04-compliance.md','05-portability.md','06-governance.md','07-clients.md'}
+                  '04-compliance.md','05-portability.md','06-governance.md','07-clients.md','08-operator-guide.md','09-quality.md','10-owner-export-profile.md',
+                  '11-operator-compliance-guide.md','API-catalog.md'}
         self.assertEqual({p.name for p in (ROOT/'docs').glob('*.md')},expected)
         stale=r'(?i)\b(?:document|profile)\s*(?:1[0-9]|2[0-9]|30)\b|23-launch-security|28-governance-and-pilot'
         for f in (ROOT/'docs').glob('*.md'):
@@ -17,7 +18,11 @@ class ConsolidationTests(unittest.TestCase):
 
     def test_internal_document_links(self):
         for f in [ROOT/'README.md',*(ROOT/'docs').glob('*.md'),*(ROOT/'reviews').glob('*.md'),ROOT/'tests/README.md']:
-            for link in re.findall(r'\]\(([^)]+)\)',f.read_text(encoding='utf-8')):
+            content=f.read_text(encoding='utf-8')
+            # Example markup in code is not an actual documentation link.
+            content=re.sub(r'^```[^\n]*\n.*?^```[^\n]*$', '', content, flags=re.M|re.S)
+            content=re.sub(r'`[^`\n]*`', '', content)
+            for link in re.findall(r'\]\(([^)]+)\)',content):
                 if link.startswith(('http:','https:')): continue
                 target,_,anchor=link.partition('#')
                 destination=(f.parent/target).resolve() if target else f
@@ -46,11 +51,11 @@ class ConsolidationTests(unittest.TestCase):
             self.assertNotIn(name,launch['$defs'])
         self.assertIn('MessageAcceptance',launch['$defs'])
 
-    def test_inline_candidate_ranking_shape(self):
+    def test_social_app_contracts_absent(self):
         schema=json.loads((ROOT/'schemas/launch.schema.json').read_text())
-        schema['$ref']='#/$defs/CandidateContent'
-        candidate={'candidate_id':M['message_id'],'author_id':I['author_id'],
-                   'timestamp':I['timestamp'],'content_type':'post','is_ad':False}
-        jsonschema.Draft202012Validator(schema).validate(candidate)
+        for name in ['CandidateContent','RankingProfile','RankingEngineInput','PrivateStateUpdateMessage','RecommendMessage','FollowSourceMessage']:
+            self.assertNotIn(name,schema['$defs'])
+        ops=json.loads((ROOT/'schemas/operations.schema.json').read_text())
+        for name in ['Preferences','ClientExperience','CustomFeed','SavedCollection']: self.assertNotIn(name,ops['$defs'])
 
 if __name__=='__main__': unittest.main()

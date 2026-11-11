@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://foryousocial.network/schemas/launch.schema.json",
-  "title": "ForYou Launch Baseline JSON Schemas",
-  "description": "Current profile 1.0 schema library. Root validates TransportMessage. Reference named definitions for API/contract objects; Ranking definitions support the optional client interface in docs/07-clients.md. Semantic validation remains mandatory.",
+  "title": "ForYou Public Message Profile 2.0 JSON Schemas",
+  "description": "Public post and signed per-record admission schema. Each receipt asserts an atomic provider-local balance debit; owner archives are not public messages. Structural validation does not verify accounting, signatures or version relationships.",
   "$ref": "#/$defs/TransportMessage",
   "$defs": {
     "DidKey": {
@@ -12,17 +12,9 @@
     },
     "MessageId": {
       "type": "string",
-      "pattern": "^fy1:[0-9a-f]{64}$"
-    },
-    "ContentAddress": {
-      "type": "string",
-      "pattern": "^ipfs://[a-z2-7]+$",
-      "minLength": 12
-    },
-    "TopicKey": {
-      "type": "string",
-      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
-      "minLength": 1
+      "pattern": "^fy1:[0-9a-f]{64}$",
+      "minLength": 68,
+      "maxLength": 68
     },
     "Version": {
       "type": "object",
@@ -33,7 +25,7 @@
       ],
       "properties": {
         "major": {
-          "const": 1
+          "const": 2
         },
         "minor": {
           "const": 0
@@ -45,66 +37,277 @@
       "additionalProperties": false,
       "required": [
         "provider_id",
-        "plan_id",
-        "receipt_id",
-        "message_id",
-        "units_charged",
-        "provider_signature",
         "author_id",
-        "issued_at"
+        "message_id",
+        "receipt_id",
+        "quote_id",
+        "schedule_id",
+        "network",
+        "amount_base_units",
+        "authorization_at",
+        "issued_at",
+        "provider_signature"
       ],
       "properties": {
         "provider_id": {
           "$ref": "#/$defs/DidKey"
         },
-        "plan_id": {
-          "type": "string",
-          "pattern": "^fyp1:[0-9a-f]{64}$"
-        },
-        "receipt_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 128
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
         },
         "message_id": {
           "$ref": "#/$defs/MessageId"
         },
-        "units_charged": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "provider_signature": {
-          "$ref": "#/$defs/Signature"
-        },
-        "period_start": {
+        "receipt_id": {
           "type": "string",
-          "format": "date-time"
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43,
+          "description": "Provider-scoped unique 32-byte CSPRNG identifier encoded as canonical unpadded base64url. Decode and re-encode to verify canonicality; identifies the atomic debit and receipt, not independently verifiable solvency."
         },
-        "period_end": {
+        "quote_id": {
           "type": "string",
-          "format": "date-time"
+          "pattern": "^fyfq2:[0-9a-f]{64}$",
+          "minLength": 70,
+          "maxLength": 70
         },
-        "tier": {
-          "type": "string"
+        "schedule_id": {
+          "type": "string",
+          "pattern": "^fyfs2:[0-9a-f]{64}$",
+          "minLength": 70,
+          "maxLength": 70
         },
-        "remaining_units_hint": {
-          "type": "number",
-          "minimum": 0
+        "network": {
+          "enum": [
+            "bitcoin-mainnet",
+            "ethereum-mainnet"
+          ]
         },
-        "audit_log_root": {
-          "type": "string"
-        },
-        "audit_proof_ref": {
-          "type": "string"
-        },
-        "author_id": {
-          "$ref": "#/$defs/DidKey"
+        "amount_base_units": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*$",
+          "maxLength": 78,
+          "description": "Positive fee in schedule accounting units: millisatoshis for BTC or wei for ETH; BTC chain deposits settle in whole satoshis."
         },
         "issued_at": {
           "type": "string",
           "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "provider_signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "authorization_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "AuthorizationEpoch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epoch_id",
+        "provider_id",
+        "author_id",
+        "epoch_sequence",
+        "activated_at",
+        "nonce",
+        "provider_signature"
+      ],
+      "properties": {
+        "epoch_id": {
+          "type": "string",
+          "pattern": "^fye1:[0-9a-f]{64}$"
+        },
+        "provider_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "epoch_sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "activated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "provider_signature": {
+          "$ref": "#/$defs/Signature"
+        }
+      }
+    },
+    "AuthorizationEpochState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "author_id",
+        "state_revision",
+        "status",
+        "epoch",
+        "provider_signature"
+      ],
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "state_revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "status": {
+          "enum": [
+            "unregistered",
+            "active",
+            "frozen"
+          ]
+        },
+        "epoch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/AuthorizationEpoch"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provider_signature": {
+          "$ref": "#/$defs/Signature"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "unregistered"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "epoch": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "epoch": {
+                "$ref": "#/$defs/AuthorizationEpoch"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "AuthorizationEpochStateResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "challenge",
+        "state",
+        "provider_signature"
+      ],
+      "properties": {
+        "challenge": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "state": {
+          "$ref": "#/$defs/AuthorizationEpochState"
+        },
+        "provider_signature": {
+          "$ref": "#/$defs/Signature"
+        }
+      }
+    },
+    "AuthorizationEpochEnroll": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "author_id",
+        "request_nonce",
+        "not_after",
+        "author_signature"
+      ],
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "request_nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "not_after": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "author_signature": {
+          "$ref": "#/$defs/Signature"
+        }
+      }
+    },
+    "AuthorizationEpochControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "author_id",
+        "expected_epoch_id",
+        "expected_state_revision",
+        "action",
+        "nonce",
+        "author_signature"
+      ],
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "expected_epoch_id": {
+          "type": "string",
+          "pattern": "^fye1:[0-9a-f]{64}$"
+        },
+        "expected_state_revision": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "action": {
+          "enum": [
+            "freeze",
+            "rotate"
+          ]
+        },
+        "nonce": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$"
+        },
+        "author_signature": {
+          "$ref": "#/$defs/Signature"
         }
       }
     },
@@ -119,7 +322,8 @@
         "valid_until",
         "delegation_signature",
         "provider_id",
-        "scope"
+        "scope",
+        "epoch"
       ],
       "properties": {
         "author_id": {
@@ -130,7 +334,10 @@
         },
         "delegation_id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^fyd1:[0-9a-f]{64}$"
+        },
+        "epoch": {
+          "$ref": "#/$defs/AuthorizationEpoch"
         },
         "valid_from": {
           "type": "string",
@@ -149,16 +356,7 @@
           "type": "array",
           "items": {
             "enum": [
-              "post",
-              "reply",
-              "quote",
-              "counterpoint",
-              "withdraw",
-              "recommend",
-              "follow_source",
-              "follow_topic",
-              "subscribe_thread",
-              "alias_registration"
+              "post"
             ]
           },
           "minItems": 1,
@@ -236,255 +434,70 @@
     },
     "PostPayload": {
       "type": "object",
-      "additionalProperties": true,
+      "additionalProperties": false,
       "required": [
         "content_format",
-        "content_summary"
+        "text"
       ],
       "properties": {
         "content_format": {
-          "type": "string",
-          "minLength": 1
+          "enum": [
+            "text/plain",
+            "text/markdown"
+          ]
         },
-        "content_summary": {
-          "type": "string",
-          "minLength": 1
-        },
-        "links": {
+        "media_slots": {
           "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "attachments": {
-          "type": "array",
-          "maxItems": 64,
+          "maxItems": 16,
           "uniqueItems": true,
+          "description": "Slot IDs MUST be unique; enforce this semantic constraint in addition to schema validation.",
           "items": {
-            "$ref": "#/$defs/ContentAddress"
+            "$ref": "#/$defs/MediaReference"
           }
         },
-        "metadata": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      }
-    },
-    "ReplyPayload": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/PostPayload"
-        },
-        {
-          "type": "object",
-          "required": [
-            "reply_to"
-          ],
-          "properties": {
-            "reply_to": {
-              "$ref": "#/$defs/MessageId"
-            }
+        "refs": {
+          "type": "array",
+          "maxItems": 32,
+          "uniqueItems": true,
+          "description": "Reference IDs and targets MUST each be unique within the array; enforce these semantic constraints and canonical target validation beyond JSON Schema.",
+          "items": {
+            "$ref": "#/$defs/PostReference"
           }
-        }
-      ]
-    },
-    "QuotePayload": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/PostPayload"
         },
-        {
-          "type": "object",
-          "required": [
-            "target_message_id"
-          ],
-          "properties": {
-            "target_message_id": {
-              "$ref": "#/$defs/MessageId"
-            }
-          }
-        }
-      ]
-    },
-    "CounterpointPayload": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/PostPayload"
-        },
-        {
-          "type": "object",
-          "required": [
-            "target_message_id"
-          ],
-          "properties": {
-            "target_message_id": {
-              "$ref": "#/$defs/MessageId"
-            }
-          }
-        }
-      ]
-    },
-    "RecommendPayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "target_message_id"
-      ],
-      "properties": {
-        "target_message_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "context": {
+        "text": {
           "type": "string"
-        },
-        "active": {
-          "type": "boolean"
-        }
-      }
-    },
-    "FollowSourcePayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "target_author_id"
-      ],
-      "properties": {
-        "target_author_id": {
-          "$ref": "#/$defs/DidKey"
-        },
-        "active": {
-          "type": "boolean"
-        }
-      }
-    },
-    "FollowTopicPayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "target_topic"
-      ],
-      "properties": {
-        "target_topic": {
-          "$ref": "#/$defs/TopicKey"
-        },
-        "active": {
-          "type": "boolean"
-        }
-      }
-    },
-    "SubscribeThreadPayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "target_thread_id"
-      ],
-      "properties": {
-        "target_thread_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "active": {
-          "type": "boolean"
-        }
-      }
-    },
-    "WithdrawPayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "target_message_id"
-      ],
-      "properties": {
-        "target_message_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "reason_code": {
-          "type": "string"
-        },
-        "replacement_reference": {
-          "type": "string"
-        }
-      }
-    },
-    "PrivateStateUpdatePayload": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "state_kind",
-        "encrypted_state",
-        "encryption_scheme",
-        "encryption_scope",
-        "device_group_id",
-        "state_sequence",
-        "supersedes"
-      ],
-      "properties": {
-        "state_kind": {
-          "type": "string",
-          "minLength": 1
-        },
-        "encrypted_state": {
-          "$ref": "#/$defs/EncryptedStateEnvelope"
-        },
-        "encryption_scheme": {
-          "type": "string",
-          "enum": [
-            "x25519-xchacha20poly1305"
-          ]
-        },
-        "encryption_scope": {
-          "type": "string",
-          "enum": [
-            "device_group"
-          ]
-        },
-        "device_group_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "state_sequence": {
-          "type": "integer",
-          "minimum": 0
         },
         "supersedes": {
-          "type": "array",
-          "maxItems": 1,
-          "items": {
-            "$ref": "#/$defs/MessageId"
+          "$ref": "#/$defs/MessageId"
+        },
+        "reply_to": {
+          "$ref": "#/$defs/MessageId"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "text": {
+                "maxLength": 0
+              }
+            },
+            "required": [
+              "text"
+            ]
+          },
+          "then": {
+            "required": [
+              "media_slots"
+            ],
+            "properties": {
+              "media_slots": {
+                "minItems": 1
+              }
+            }
           }
         }
-      }
-    },
-    "AliasRegistrationPayload": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "alias",
-        "namespace"
-      ],
-      "properties": {
-        "alias": {
-          "type": "string",
-          "minLength": 1
-        },
-        "namespace": {
-          "type": "string"
-        },
-        "display_name": {
-          "type": "string"
-        },
-        "bio": {
-          "type": "string"
-        },
-        "avatar_reference": {
-          "type": "string"
-        },
-        "profile_links": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      }
+      ]
     },
     "MessageBase": {
       "type": "object",
@@ -522,42 +535,6 @@
         "version": {
           "$ref": "#/$defs/Version"
         },
-        "content_address": {
-          "$ref": "#/$defs/ContentAddress"
-        },
-        "thread_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "language": {
-          "type": "string"
-        },
-        "keywords": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "topic_tags": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/TopicKey"
-          }
-        },
-        "media_kinds": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "is_ad": {
-          "type": "boolean"
-        },
-        "content_warning_flags": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
         "submission_receipt": {
           "$ref": "#/$defs/SubmissionReceipt"
         },
@@ -566,14 +543,6 @@
         },
         "payload": {
           "type": "object"
-        },
-        "content_manifest": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 64,
-          "items": {
-            "$ref": "#/$defs/ContentObject"
-          }
         }
       },
       "allOf": [
@@ -613,9 +582,6 @@
             "message_type": {
               "const": "post"
             },
-            "is_ad": {
-              "const": false
-            },
             "payload": {
               "$ref": "#/$defs/PostPayload"
             }
@@ -623,547 +589,8 @@
         }
       ]
     },
-    "ReplyMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "required": [
-            "submission_receipt",
-            "thread_id"
-          ],
-          "properties": {
-            "message_type": {
-              "const": "reply"
-            },
-            "payload": {
-              "$ref": "#/$defs/ReplyPayload"
-            }
-          }
-        }
-      ]
-    },
-    "QuoteMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "required": [
-            "submission_receipt"
-          ],
-          "properties": {
-            "message_type": {
-              "const": "quote"
-            },
-            "payload": {
-              "$ref": "#/$defs/QuotePayload"
-            }
-          }
-        }
-      ]
-    },
-    "CounterpointMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "required": [
-            "submission_receipt"
-          ],
-          "properties": {
-            "message_type": {
-              "const": "counterpoint"
-            },
-            "payload": {
-              "$ref": "#/$defs/CounterpointPayload"
-            }
-          }
-        }
-      ]
-    },
-    "RecommendMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "recommend"
-            },
-            "payload": {
-              "$ref": "#/$defs/RecommendPayload"
-            }
-          },
-          "required": [
-            "submission_receipt"
-          ]
-        }
-      ]
-    },
-    "FollowSourceMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "follow_source"
-            },
-            "payload": {
-              "$ref": "#/$defs/FollowSourcePayload"
-            }
-          },
-          "required": [
-            "submission_receipt"
-          ]
-        }
-      ]
-    },
-    "FollowTopicMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "follow_topic"
-            },
-            "payload": {
-              "$ref": "#/$defs/FollowTopicPayload"
-            }
-          },
-          "required": [
-            "submission_receipt"
-          ]
-        }
-      ]
-    },
-    "SubscribeThreadMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "subscribe_thread"
-            },
-            "payload": {
-              "$ref": "#/$defs/SubscribeThreadPayload"
-            }
-          },
-          "required": [
-            "submission_receipt"
-          ]
-        }
-      ]
-    },
-    "WithdrawMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "required": [
-            "submission_receipt"
-          ],
-          "properties": {
-            "message_type": {
-              "const": "withdraw"
-            },
-            "payload": {
-              "$ref": "#/$defs/WithdrawPayload"
-            }
-          }
-        }
-      ]
-    },
-    "PrivateStateUpdateMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "private_state_update"
-            },
-            "payload": {
-              "$ref": "#/$defs/PrivateStateUpdatePayload"
-            }
-          },
-          "not": {
-            "anyOf": [
-              {
-                "required": [
-                  "signer_id"
-                ]
-              },
-              {
-                "required": [
-                  "delegation"
-                ]
-              },
-              {
-                "required": [
-                  "submission_receipt"
-                ]
-              }
-            ]
-          },
-          "propertyNames": {
-            "enum": [
-              "message_id",
-              "author_id",
-              "timestamp",
-              "message_type",
-              "version",
-              "signature",
-              "payload"
-            ]
-          }
-        }
-      ]
-    },
-    "AliasRegistrationMessage": {
-      "allOf": [
-        {
-          "$ref": "#/$defs/MessageBase"
-        },
-        {
-          "type": "object",
-          "properties": {
-            "message_type": {
-              "const": "alias_registration"
-            },
-            "payload": {
-              "$ref": "#/$defs/AliasRegistrationPayload"
-            }
-          },
-          "required": [
-            "submission_receipt"
-          ]
-        }
-      ]
-    },
-    "ContentRetrievalSuccess": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "content_address",
-        "message_id",
-        "content_format",
-        "content",
-        "retrieved_at"
-      ],
-      "properties": {
-        "content_address": {
-          "$ref": "#/$defs/ContentAddress"
-        },
-        "message_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "content_format": {
-          "const": "application/octet-stream;base64url"
-        },
-        "content": {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9_-]*$",
-          "maxLength": 44739243
-        },
-        "retrieved_at": {
-          "type": "string",
-          "format": "date-time"
-        }
-      }
-    },
-    "ContentRetrievalUnavailable": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "content_address",
-        "status",
-        "reason"
-      ],
-      "properties": {
-        "content_address": {
-          "$ref": "#/$defs/ContentAddress"
-        },
-        "status": {
-          "const": "unavailable"
-        },
-        "reason": {
-          "type": "string",
-          "minLength": 1
-        }
-      }
-    },
-    "ContentRetrievalResponse": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/ContentRetrievalSuccess"
-        },
-        {
-          "$ref": "#/$defs/ContentRetrievalUnavailable"
-        }
-      ]
-    },
-    "RankingProfile": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "version",
-        "profile_id",
-        "display_name",
-        "objectives",
-        "topic_preferences",
-        "language_preferences",
-        "sensitivity_filters"
-      ],
-      "properties": {
-        "version": {
-          "type": "integer",
-          "minimum": 1
-        },
-        "profile_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "display_name": {
-          "type": "string",
-          "minLength": 1
-        },
-        "objectives": {
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "type": "string"
-          }
-        },
-        "topic_preferences": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "number"
-          }
-        },
-        "language_preferences": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "sensitivity_filters": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      }
-    },
-    "CandidateContent": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "candidate_id",
-        "author_id",
-        "timestamp",
-        "content_type",
-        "is_ad"
-      ],
-      "properties": {
-        "candidate_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "author_id": {
-          "$ref": "#/$defs/DidKey"
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "language": {
-          "type": "string"
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "keywords": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "thread_id": {
-          "$ref": "#/$defs/MessageId"
-        },
-        "reply_to": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "content_address": {
-          "$ref": "#/$defs/ContentAddress"
-        },
-        "payment_class": {
-          "type": "string"
-        },
-        "is_ad": {
-          "type": "boolean"
-        },
-        "local_features": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "engagement_features": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "retrieval_hints": {
-          "type": "object",
-          "additionalProperties": true
-        }
-      }
-    },
-    "RankingEngineInput": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "profile",
-        "candidates",
-        "runtime"
-      ],
-      "properties": {
-        "profile": {
-          "$ref": "#/$defs/RankingProfile"
-        },
-        "candidates": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/CandidateContent"
-          }
-        },
-        "runtime": {
-          "type": "object",
-          "additionalProperties": true,
-          "required": [
-            "mode",
-            "model_id"
-          ],
-          "properties": {
-            "mode": {
-              "type": "string",
-              "enum": [
-                "local",
-                "remote",
-                "hybrid"
-              ]
-            },
-            "model_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "max_items": {
-              "type": "integer",
-              "minimum": 1
-            }
-          }
-        }
-      }
-    },
-    "RankingEngineOutput": {
-      "type": "object",
-      "additionalProperties": true,
-      "required": [
-        "model_id",
-        "mode",
-        "results"
-      ],
-      "properties": {
-        "model_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "mode": {
-          "type": "string",
-          "enum": [
-            "local",
-            "remote",
-            "hybrid"
-          ]
-        },
-        "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "required": [
-              "candidate_id",
-              "score"
-            ],
-            "properties": {
-              "candidate_id": {
-                "type": "string",
-                "minLength": 1
-              },
-              "score": {
-                "type": "number"
-              }
-            }
-          }
-        }
-      }
-    },
     "TransportMessage": {
-      "oneOf": [
-        {
-          "$ref": "#/$defs/PostMessage"
-        },
-        {
-          "$ref": "#/$defs/ReplyMessage"
-        },
-        {
-          "$ref": "#/$defs/QuoteMessage"
-        },
-        {
-          "$ref": "#/$defs/CounterpointMessage"
-        },
-        {
-          "$ref": "#/$defs/RecommendMessage"
-        },
-        {
-          "$ref": "#/$defs/FollowSourceMessage"
-        },
-        {
-          "$ref": "#/$defs/FollowTopicMessage"
-        },
-        {
-          "$ref": "#/$defs/SubscribeThreadMessage"
-        },
-        {
-          "$ref": "#/$defs/WithdrawMessage"
-        },
-        {
-          "$ref": "#/$defs/PrivateStateUpdateMessage"
-        },
-        {
-          "$ref": "#/$defs/AliasRegistrationMessage"
-        }
-      ]
+      "$ref": "#/$defs/PostMessage"
     },
     "Signature": {
       "type": "string",
@@ -1176,6 +603,7 @@
         "author_id",
         "provider_id",
         "delegation_id",
+        "delegation",
         "signature"
       ],
       "properties": {
@@ -1187,60 +615,10 @@
         },
         "delegation_id": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^fyd1:[0-9a-f]{64}$"
         },
-        "signature": {
-          "$ref": "#/$defs/Signature"
-        }
-      }
-    },
-    "FundingInvoice": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "invoice_id",
-        "provider_id",
-        "author_id",
-        "plan_id",
-        "network",
-        "amount_base_units",
-        "recipient",
-        "expires_at",
-        "signature"
-      ],
-      "properties": {
-        "invoice_id": {
-          "type": "string",
-          "minLength": 1
-        },
-        "provider_id": {
-          "$ref": "#/$defs/DidKey"
-        },
-        "author_id": {
-          "$ref": "#/$defs/DidKey"
-        },
-        "plan_id": {
-          "type": "string",
-          "pattern": "^fyp1:[0-9a-f]{64}$"
-        },
-        "network": {
-          "enum": [
-            "bitcoin-mainnet",
-            "ethereum-mainnet"
-          ]
-        },
-        "amount_base_units": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*$"
-        },
-        "recipient": {
-          "type": "string",
-          "minLength": 1
-        },
-        "expires_at": {
-          "type": "string",
-          "format": "date-time",
-          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+        "delegation": {
+          "$ref": "#/$defs/Delegation"
         },
         "signature": {
           "$ref": "#/$defs/Signature"
@@ -1252,19 +630,25 @@
       "additionalProperties": false,
       "required": [
         "provider_id",
-        "plan_id",
-        "message_id"
+        "author_id",
+        "message_id",
+        "quote_id"
       ],
       "properties": {
         "provider_id": {
           "$ref": "#/$defs/DidKey"
         },
-        "plan_id": {
-          "type": "string",
-          "minLength": 1
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
         },
         "message_id": {
           "$ref": "#/$defs/MessageId"
+        },
+        "quote_id": {
+          "type": "string",
+          "pattern": "^fyfq2:[0-9a-f]{64}$",
+          "minLength": 70,
+          "maxLength": 70
         }
       }
     },
@@ -1272,14 +656,15 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
+        "provider_id",
         "intent",
         "authorization",
-        "provider_id",
-        "plan_id"
+        "quote_id"
       ],
       "properties": {
         "intent": {
           "type": "object",
+          "additionalProperties": false,
           "required": [
             "author_id",
             "timestamp",
@@ -1287,6 +672,39 @@
             "version",
             "payload"
           ],
+          "properties": {
+            "author_id": {
+              "$ref": "#/$defs/DidKey"
+            },
+            "signer_id": {
+              "$ref": "#/$defs/DidKey"
+            },
+            "delegation": {
+              "$ref": "#/$defs/Delegation"
+            },
+            "timestamp": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+            },
+            "message_type": {
+              "const": "post"
+            },
+            "version": {
+              "$ref": "#/$defs/Version"
+            },
+            "payload": {
+              "$ref": "#/$defs/PostPayload"
+            }
+          },
+          "dependentRequired": {
+            "signer_id": [
+              "delegation"
+            ],
+            "delegation": [
+              "signer_id"
+            ]
+          },
           "not": {
             "anyOf": [
               {
@@ -1323,145 +741,11 @@
         "provider_id": {
           "$ref": "#/$defs/DidKey"
         },
-        "plan_id": {
+        "quote_id": {
           "type": "string",
-          "pattern": "^fyp1:[0-9a-f]{64}$"
-        }
-      }
-    },
-    "LaunchPlan": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "provider_id",
-        "plan_id",
-        "network",
-        "amount_base_units",
-        "signature",
-        "credited_units",
-        "unit_costs",
-        "service_offer_id"
-      ],
-      "properties": {
-        "provider_id": {
-          "$ref": "#/$defs/DidKey"
-        },
-        "plan_id": {
-          "type": "string",
-          "pattern": "^fyp1:[0-9a-f]{64}$"
-        },
-        "network": {
-          "enum": [
-            "bitcoin-mainnet",
-            "ethereum-mainnet"
-          ]
-        },
-        "amount_base_units": {
-          "type": "string",
-          "pattern": "^[1-9][0-9]*$"
-        },
-        "signature": {
-          "$ref": "#/$defs/Signature"
-        },
-        "credited_units": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 9007199254740991
-        },
-        "unit_costs": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "post",
-            "reply",
-            "quote",
-            "counterpoint",
-            "withdraw",
-            "recommend",
-            "follow_source",
-            "follow_topic",
-            "subscribe_thread",
-            "alias_registration"
-          ],
-          "properties": {
-            "post": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "reply": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "quote": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "counterpoint": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "withdraw": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "recommend": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "follow_source": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "follow_topic": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "subscribe_thread": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            },
-            "alias_registration": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 9007199254740991
-            }
-          }
-        },
-        "service_offer_id": {
-          "type": "string",
-          "pattern": "^fyso1:[0-9a-f]{64}$"
-        }
-      }
-    },
-    "ContentObject": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "content_address",
-        "byte_length",
-        "media_type"
-      ],
-      "properties": {
-        "content_address": {
-          "$ref": "#/$defs/ContentAddress"
-        },
-        "byte_length": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 33554432
-        },
-        "media_type": {
-          "type": "string",
-          "minLength": 1
+          "pattern": "^fyfq2:[0-9a-f]{64}$",
+          "minLength": 70,
+          "maxLength": 70
         }
       }
     },
@@ -1478,6 +762,416 @@
         },
         "status": {
           "const": "accepted"
+        }
+      }
+    },
+    "PostReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "target"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,32}$",
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          }
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MessageId"
+            },
+            {
+              "$ref": "#/$defs/DidKey"
+            }
+          ]
+        }
+      }
+    },
+    "MediaReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "url",
+        "kind",
+        "sha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,32}$",
+          "not": {
+            "pattern": "[^a-z0-9_-]"
+          }
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "maxLength": 4096,
+          "pattern": "^https://[^\\s/?#@\\\\]+(?:[/?#][^\\s\\\\]*)?$"
+        },
+        "kind": {
+          "enum": [
+            "image",
+            "video"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "minLength": 64,
+          "maxLength": 64,
+          "description": "SHA-256 of the exact complete media bytes; verify before rendering. Admission does not fetch media."
+        },
+        "alt_text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991,
+          "description": "Exact byte length of the complete media object. Clients MUST abort larger transfers and reject a length mismatch."
+        }
+      }
+    },
+    "PreparedAdmissionRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request",
+        "receipt"
+      ],
+      "properties": {
+        "request": {
+          "$ref": "#/$defs/AdmissionRequest"
+        },
+        "receipt": {
+          "$ref": "#/$defs/SubmissionReceipt"
+        }
+      }
+    },
+    "PublicTransportMessage": {
+      "$ref": "#/$defs/TransportMessage"
+    },
+    "DiscoveryPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generated_at",
+        "expires_at",
+        "messages",
+        "next_cursor"
+      ],
+      "properties": {
+        "generated_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "messages": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/PublicTransportMessage"
+          }
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      }
+    },
+    "ArchivePayload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state_kind",
+        "encrypted_state",
+        "encryption_scheme",
+        "encryption_scope",
+        "device_group_id",
+        "state_sequence",
+        "supersedes"
+      ],
+      "properties": {
+        "state_kind": {
+          "const": "export.prepared-admission.v1"
+        },
+        "encrypted_state": {
+          "$ref": "#/$defs/EncryptedStateEnvelope"
+        },
+        "encryption_scheme": {
+          "type": "string",
+          "enum": [
+            "x25519-xchacha20poly1305"
+          ]
+        },
+        "encryption_scope": {
+          "type": "string",
+          "enum": [
+            "device_group"
+          ]
+        },
+        "device_group_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state_sequence": {
+          "const": 0
+        },
+        "supersedes": {
+          "type": "array",
+          "maxItems": 0,
+          "items": {
+            "$ref": "#/$defs/MessageId"
+          }
+        }
+      }
+    },
+    "ArchiveRecord": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/MessageBase"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "message_type": {
+              "const": "archive_record"
+            },
+            "payload": {
+              "$ref": "#/$defs/ArchivePayload"
+            }
+          },
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "signer_id"
+                ]
+              },
+              {
+                "required": [
+                  "delegation"
+                ]
+              },
+              {
+                "required": [
+                  "submission_receipt"
+                ]
+              }
+            ]
+          },
+          "propertyNames": {
+            "enum": [
+              "message_id",
+              "author_id",
+              "timestamp",
+              "message_type",
+              "version",
+              "signature",
+              "payload"
+            ]
+          }
+        }
+      ]
+    },
+    "MessageListQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "from": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "cursor": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "date",
+              "from"
+            ]
+          },
+          {
+            "required": [
+              "date",
+              "until"
+            ]
+          }
+        ]
+      }
+    },
+    "AuthorMessageListQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "from": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "until": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "cursor": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "minLength": 43,
+          "maxLength": 43
+        },
+        "author_id": {
+          "$ref": "#/$defs/DidKey"
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "date",
+              "from"
+            ]
+          },
+          {
+            "required": [
+              "date",
+              "until"
+            ]
+          }
+        ]
+      },
+      "required": [
+        "author_id"
+      ]
+    },
+    "KeySuccession": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "succession_id",
+        "old_id",
+        "new_id",
+        "effective_at",
+        "old_signature",
+        "new_signature"
+      ],
+      "description": "old_id and new_id MUST differ; enforce semantically.",
+      "properties": {
+        "succession_id": {
+          "type": "string",
+          "pattern": "^fyks2:[0-9a-f]{64}$"
+        },
+        "old_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "new_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "effective_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "old_signature": {
+          "$ref": "#/$defs/Signature"
+        },
+        "new_signature": {
+          "$ref": "#/$defs/Signature"
+        }
+      }
+    },
+    "ChangesPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "items",
+        "next_after",
+        "more"
+      ],
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/DidKey"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sequence",
+              "message"
+            ],
+            "properties": {
+              "sequence": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 9007199254740991
+              },
+              "message": {
+                "$ref": "#/$defs/PublicTransportMessage"
+              }
+            }
+          }
+        },
+        "next_after": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "more": {
+          "type": "boolean"
         }
       }
     }

@@ -2,122 +2,811 @@
 
 ## Scope and compatibility
 
-Normative wire/security profile 1.0. The supported pre-release message version is `{ "major": 1, "minor": 0 }`; reject other versions without silent downgrade. The schema defines structural message variants; this document defines their semantic validation. Cryptographic test vectors are in `tests/security-vectors.json`. Service obligations and financial terms are owned by the economics specification; client behavior and optional ranking are owned by the client specification.
+This document defines the wire and security profile of specification release 1.0.
 
-The baseline public types are post, reply, quote, counterpoint, withdraw, recommend, follow_source, follow_topic, subscribe_thread and alias_registration. All require a receipt. Polls, advertisements and reusable admission tokens are excluded from launch acceptance, including tokens attached alongside receipts. This closes the unlimited-token admission path without inventing distributed consensus. Private state uses the separate authenticated sync path below.
+- Clients and providers MUST reject message versions they do not support, without silent downgrade.
+- The schema defines structural message variants; this document defines their semantic validation.
+- Cryptographic test vectors are in `tests/security-vectors.json`.
+- Fees, settlement, distribution and retention are owned by the [economics specification](./03-economics.md); client behavior is owned by the client integration specification.
+
+| Identifier | Value | Meaning |
+| --- | --- | --- |
+| Specification release | 1.0 | The frozen set of documents and schemas |
+| Message `version` | `{ "major": 2, "minor": 0 }` | Wire format of signed messages; the only supported value |
+| Signing prefix | `ForYou/1/` | Domain-separation prefix; stable across wire versions |
+| ID prefixes | `fy1:`, `fyd1:`, `fye1:`, `fyfs2:`, `fydi2:`, `fydc2:`, `fyfq2:`, `fyqr2:`, `fydp2:`, `fyds2:`, `fyrd2:`, `fyks2:`, `fyfc2:`, `fysc2:`, `fyku2:` | Opaque type tags; the digit is part of the tag and does not track the release or wire version |
+
+All signed objects are closed: an unknown field is rejected. Adding a field therefore requires a new minor version.
+
+Baseline message scope:
+
+- The only baseline public message type is post.
+- Each post requires a bound receipt.
+- A comment is a post carrying optional reply_to; it purchases the same service as another post.
+- Likes/recommendations, favorites, follows, subscriptions, profiles, ranking, polls and app preference sync have no core message types or endpoints.
+- Unfinished submissions and owner-only export records never enter public listing/download.
 
 ## Bytes, keys and signatures
 
-Use RFC 8785 JCS encoded as UTF-8. Reject duplicate object keys, invalid Unicode, non-finite numbers and integers outside ±(2^53−1) before canonicalization; never normalize strings or inject defaults. Maximum transport JSON is 1 MiB, nesting depth 32. Financial amounts use base-unit integer decimal strings; allowance units are positive safe integers. Dates use exactly `YYYY-MM-DDTHH:mm:ssZ`, valid Gregorian UTC, with no leap seconds or fractions.
+Requirement language follows the [documentation index](./README.md#normative-language).
 
-Signing uses pure Ed25519 (RFC 8032), not Ed25519ph. A signing DID is `did:key:z` plus canonical base58btc of bytes `ed 01` followed by the 32-byte public key; reject other codecs, fragments and noncanonical encodings. Signatures are the 64 raw signature bytes in unpadded base64url; reject padding and noncanonical encodings. Reject noncanonical Ed25519 points, small-order points and noncanonical scalar S. Do not convert signing keys into encryption keys.
+### Canonical encoding
 
-Define `P(label, object) = UTF8("ForYou/1/" + label + "\n") || JCS(object)`. Each proof signs P with its own label. For `message`, omit only the top-level `signature`. For `receipt`, omit only `provider_signature`. For `delegation`, omit only `delegation_signature`. For `revoke`, omit only `signature`. Embedded proofs remain covered. All included extension fields are signed. Unknown top-level fields in these security objects are rejected. For every other signed artifact use the exact domain label and field exclusions explicitly specified by its owning document. Never infer a label from a schema definition name. An artifact without a defined signing profile cannot be accepted as a signed protocol object. Service artifacts are not admission evidence.
+- Use RFC 8785 JCS encoded as UTF-8.
+- Reject duplicate object keys, invalid Unicode, non-finite numbers and integers outside ±(2^53−1) before canonicalization; never normalize strings or inject defaults.
+
+### Size limits
+
+Define `MAX_MESSAGE_BYTES = 1048576`.
+
+| Object | Limit |
+| --- | --- |
+| A single complete public message and ordinary transport JSON | At most MAX_MESSAGE_BYTES, nesting depth 32 |
+| The [public listing envelope](./05-portability.md#snapshot-pagination) | may be at most 2 MiB while each nested message remains at most 1 MiB |
+
+- The bounded owner-export archive has assembly-only exceptions in [owner export profile](./10-owner-export-profile.md): a prepared-admission, terms or provider-specific evidence file up to 2 MiB and an ExportPartManifest up to 4 MiB.
+- Enforce designated inner and complete-file byte limits before allocation and parse, reject compressed representations, and retrieve those objects as authenticated chunks of at most 262144 bytes.
+- These allowances never change the public message/ordinary JSON limit or permit archive objects on public routes.
+
+### Value formats
+
+- Financial amounts use base-unit integer decimal strings.
+- Dates use exactly `YYYY-MM-DDTHH:mm:ssZ`, valid Gregorian UTC, with no leap seconds or fractions.
+
+### Keys and signature encoding
+
+- Signing uses pure Ed25519 (RFC 8032), not Ed25519ph.
+- A signing DID is `did:key:z` plus canonical base58btc of bytes `ed 01` followed by the 32-byte public key; reject other codecs, fragments and noncanonical encodings.
+- Signatures are the 64 raw signature bytes in unpadded base64url; reject padding and noncanonical encodings.
+- Reject noncanonical Ed25519 points, small-order points and noncanonical scalar S.
+- Do not convert signing keys into encryption keys.
+
+### Strict verification profile
+
+For interoperable verification:
+
+1. Decode public key A and the signature's first 32 bytes R as canonical RFC 8032 Ed25519 point encodings: reject y >= p, failed point recovery, and an invalid sign bit for x = 0.
+2. Both A and R MUST be non-identity members of the prime-order subgroup generated by B: [L]A = [L]R = identity, where L = 2^252 + 27742317777372353535851937790883648493. This excludes mixed-order points as well as non-identity small-order points.
+3. Decode the final 32 signature bytes as little-endian S and reject S >= L.
+4. For the exact domain-separated signed bytes M, compute k = little_endian_integer(SHA-512(ENC(R) || ENC(A) || M)) mod L; accept only when the uncofactored equation [S]B = R + [k]A holds.
+
+Further rules:
+
+- No Ed25519ctx or Ed25519ph preprocessing applies.
+- These subgroup checks are an additional ForYou profile restriction: RFC 8032 also describes a cofactored verification equation.
+- All signature purposes use this same verification profile; this does not change their signed bytes or labels.
+- See [RFC 8032 section 5.1.7](https://www.rfc-editor.org/rfc/rfc8032#section-5.1.7) and [libsodium point validation](https://doc.libsodium.org/advanced/point-arithmetic).
+
+Conformance:
+
+- The stricter profile is not guaranteed by every standard Ed25519 library.
+- Conformance testing includes the published [strict vectors](../tests/strict-ed25519-vectors.json), including mixed-order public keys and R values, noncanonical encodings, scalar bounds and a cofactored-only forgery.
+- Test-only arithmetic references are provided in [Python](../tests/test_ed25519_strict.py) and [JavaScript](../tests/strict-ed25519-reference.mjs); they are deliberately slow, non-constant-time public-data checks, not production cryptographic implementations.
+- Production implementations need independent security review and cross-implementation interoperability testing.
+
+### Signing input
+
+Define `P(label, object) = UTF8("ForYou/1/" + label + "\n") || JCS(object)`. Each proof signs P with its own label.
+
+| Proof | Omitted from the signed object |
+| --- | --- |
+| `message` | Only the top-level `signature` |
+| `receipt` | Only `provider_signature` |
+| `delegation` | Only `delegation_signature` |
+| `revoke` | Only `signature` |
+
+- Embedded proofs remain covered.
+- All included extension fields are signed.
+- Unknown top-level fields in these security objects are rejected.
+- For every other signed artifact use the exact domain label and field exclusions explicitly specified by its owning document.
+- Never infer a label from a schema definition name.
+- An artifact without a defined signing profile cannot be accepted as a signed protocol object.
+- Service artifacts are not admission evidence.
 
 ## Intent and receipts
 
-Let I be the complete message with only top-level `message_id`, `signature`, and `submission_receipt` removed. No payment or token field is allowed. `message_id = "fy1:" + lowercase_hex(SHA256(P("intent", I)))`. Include all payload and metadata fields, including delegation, in I. Private state uses the same ID computation after encryption. Content-address verification is separate and mandatory when fetching external bytes.
+Let I be the complete message with only top-level `message_id`, `signature`, and `submission_receipt` removed.
 
-A receipt requires provider_id, plan_id, receipt_id, message_id, author_id, issued_at, units_charged and provider_signature. Its message_id commits to I; a second intent_hash field is unnecessary. Its author_id MUST equal the message author. `receipt_id` is provider-scoped and never reused for another intent. Root-signed messages MUST omit signer_id and delegation; delegated messages MUST have both with signer_id different from author_id. `issued_at` is the provider's acceptance time, not a client assertion. Units are a positive safe integer from the authorized plan schedule.
+- No payment or token field is allowed.
+- `message_id = "fy1:" + lowercase_hex(SHA256(P("intent", I)))`.
+- Include all payload and metadata fields, including delegation, in I.
+- Owner-only archive records use the same ID computation after encryption, but are never TransportMessage objects.
+- Each signed media slot commits to its exact URL and SHA-256 digest; retrieved bytes require separate verification before display.
 
-The client sends `POST /v1/admissions` with `{provider_id, plan_id, intent: I, authorization: S}` where S is the author/delegate signature of `P("admission", {provider_id, plan_id, message_id})`. The provider recomputes the ID and checks this signature, delegation if any, account ownership, target authorization (including withdrawal ownership), limits and funding. Plan access MUST be authorized to that author; payment references alone are not credentials. The provider atomically records a durable debit and immutable receipt keyed by (plan_id, message_id) before returning it. Retries return the original receipt and never debit twice. Replicas use one linearizable ledger; a partitioned replica fails closed. Insufficient credit returns 409 `insufficient_units` without debit; malformed input 400; unauthorized 403; unavailable ledger 503. A lost response is recovered by repeating the same authenticated request. No automatic refund follows timeout: accepted receipts remain replayable historical evidence. Clients must show the quoted integer cost and approve changed costs before submitting; bind the plan_id to an immutable priced schedule, creating a new plan_id for price changes.
+### Fee schedule and confirmed provider balance
 
-The client attaches the receipt and signs P("message", complete message without signature). Changing any intent field requires a new admission. A third party can relay the identical authorized intent but cannot alter it or debit another account. Relays MUST recompute the ID, check every proof, type-specific target authorization, author/receipt equality and supported version before accepting. A valid provider signature is insufficient if that provider is not in the receiving host's explicitly configured trust policy. Provider trust includes honest funding, metering and timestamps; this design does not cryptographically prove provider solvency. Trust changes are local policy, not erasure of signed history.
+- A provider-local prepaid balance is a custodial claim against that provider, not a transferable network token or a globally portable balance.
+- Bitcoin is accounted in integer millisatoshis (msat), with 1 on-chain satoshi = 1000 msat; Ethereum is accounted in integer wei.
+- The client's confirmed provider-and-asset balance funds per-record debits.
+- Funding and withdrawal network fees are separate from the protocol fee.
+- The [economics specification](./03-economics.md) defines the fee schedule, the trust and liability rules for balances, and how every debited fee is settled to the Foundation.
+
+Fee schedule validity and fee computation:
+
+- A FeeSchedule is valid only with a FeeScheduleApproval signed by the release threshold and inside the revision bound, as defined in [economics](./03-economics.md#denominations-and-versioned-fee-schedule).
+- Clients and providers MUST verify both; neither a provider nor the Foundation can create, select, delay or decline a schedule.
+- `schedule_id` is `fyfs2:` plus lowercase SHA256 hex of P("fee-schedule-id", the schedule excluding schedule_id).
+- The signed intent carries message version major 2 while the domain-separation prefix `ForYou/1/` remains stable.
+- `billable_bytes` is the exact UTF-8 JCS byte length of I, including text and media-slot metadata and excluding message_id, submission_receipt and final signature.
+- Apply the exact integer base plus per-KiB formula of the approved schedule.
+
+### Funding the provider-local balance
+
+- The author uses fresh root service-auth to request a DepositInvoice for one provider, author, network and exact on-chain amount.
+- The invoice funds the author’s provider-local balance, which can pay for multiple posts; it is not a per-post invoice and is not bound to a message ID.
+- A third party may send funds to the invoice destination without acquiring the author’s signing key or posting authority.
+- Verify its schema, pinned provider signature, content ID, author, network, exact amount, unique destination, expiry and displayed network fees against the locally approved request before wallet handoff.
+- Record the attempt durably; a timeout is not permission to pay a second time.
+- `DepositTransfer` and `DepositProof` are hints until the provider independently verifies network, canonical chain transfer, destination, exact amount, success and the applicable confirmation threshold.
+- Pending funding is never spendable.
+
+#### Deposit invoice route
+
+| `POST /v1/deposits` | Rule |
+| --- | --- |
+| Authentication | Fresh root service-auth |
+| Request | Closed DepositRequest `{provider_id,author_id,network,amount_chain_units,request_id,not_after}` |
+| Request checks | Bind authenticated author and endpoint provider, require canonical random 32-byte request_id and `now < not_after <= now + 60 seconds` for new requests |
+| Responses | Return 201 with the new invoice or 200 with the retained original invoice on an authenticated exact retry before new issuance checks; a conflicting retained request ID returns 409 |
+
+A new signed DepositInvoice contains `{deposit_id,provider_id,author_id,network,amount_chain_units,recipient,issued_at,expires_at,provider_signature}`.
+
+- deposit_id is `fydi2:` plus lowercase SHA256 hex of P("deposit-invoice-id", excluding deposit_id and provider_signature); sign P("deposit-invoice", excluding provider_signature).
+- The destination is unique to the invoice and never reassigned, including after expiry or recovery; preserve durable attribution for delayed transfers for as long as applicable liabilities exist.
+- BTC amounts are whole satoshis, ETH amounts are wei.
+
+Invoice limits and durability:
+
+- Permit at most four unexpired, unpaid invoices per author and network at a provider; count pending observed transfers against this cap until final or expired.
+- Apply disclosed aggregate outstanding-state, queue, byte, concurrency, global and per-source work and issuance limits before allocation, returning 429 or 503 under saturation.
+- Reserve protected bounded capacity for lawful claims and recovery, promptly clean expired working state, and retain attribution and liability records independently.
+- Enforce these caps atomically without deleting outstanding invoices or evidence of payments; expiry and cap release do not extinguish a claim for funds received.
+- Preserve pending/late-payment liabilities and idempotency under recovery; an expired request cannot be recreated after compaction or clock rollback.
+
+#### Deposit observation and balance routes
+
+| `POST /v1/deposits/observe` | Rule |
+| --- | --- |
+| Authentication | Root service-auth |
+| Request | DepositProof `{provider_id,author_id,deposit_id,transfer}` |
+| Not yet confirmed | A structurally valid hint that is not yet confirmed returns 202 `{status:"pending"}`, without spendable balance |
+| Confirmed | A confirmed qualifying transfer returns the newly committed signed DepositCredit with 201, or the original with 200 for an exact authenticated retry |
+
+- The DepositCredit credit_id is `fydc2:` plus SHA256 hex of P("deposit-credit-id", excluding credit_id and provider_signature), signed under P("deposit-credit", excluding provider_signature).
+- BTC transfer identity is `(network,txid,output_index)`; ETH is `(network,tx_hash)`.
+- Verify the exact object schemas, chain, finality and invoice bindings; never infer success from the caller's hint.
+
+| `GET /v1/balances/{network}` | Rule |
+| --- | --- |
+| Authentication | Fresh root service-auth |
+| Path | network is exactly `bitcoin-mainnet` or `ethereum-mainnet` |
+| Result | BalanceStatus signed under P("balance-status", excluding provider_signature) |
+
+- Its available, frozen and reserved amounts are disjoint author-scoped accounting categories, not recipient claims or proof of solvency.
+
+For both `POST /v1/deposits/observe` and `GET /v1/balances/{network}`: authenticated exact retries recover original durable results without another credit; use 429/503 for bounded overload and the nonrevealing rights channel for inaccessible records.
+
+#### Mainnet recipients, confirmation and expiry
+
+- For mainnet funding, BTC recipients are canonical Bitcoin mainnet Base58Check P2PKH/P2SH or lowercase `bc1` witness v0 (20- or 32-byte program, Bech32) or v1 (32-byte program, Bech32m); compare the actual output script, not just address text.
+- Exclude coinbase outputs and unknown witness versions.
+- ETH recipients are nonzero `0x` plus 40 lowercase hexadecimal digits; accept only successful top-level native-value transfers, not token or internal transfers.
+- Check actual chain identity and exact integer native amount.
+- The provider credits after six BTC confirmations or successful ETH finalized inclusion; those thresholds do not make reorganization or operator dishonesty impossible.
+- `expires_at` is at most 24 hours after `issued_at`, and initial qualification compares the containing canonical block timestamp to the signed expiry.
+- A single otherwise qualifying native transfer is assessed by its canonical containing block timestamp, not its broadcast time or the later confirmation/finality time; chain timestamps cannot prove when a payer initiated payment.
+- An observed but underconfirmed transfer remains pending, including when finality is reached after expiry.
+- Do not aggregate partial payments or outputs to satisfy an invoice; mismatches and transfers first included after expiry follow the claims process.
+- A previously credited exact transfer re-included after expiry restores only its original credit and allocation history, never a second credit.
+- Dust, delayed observation, duplicates and chain reversals follow the separately verified remedy/reconciliation path.
+
+#### Transfer consumption and claims
+
+Consumption:
+
+- A qualifying transfer is consumed once across all accounts of that provider in a durable atomic commit that creates the corresponding signed DepositCredit.
+- An invoice may produce at most one DepositCredit: atomically bind the first qualifying transfer identity to the invoice and route any other transfer, including another exact payment, to confidential claims.
+- Concurrent observations and recovery preserve both the provider-global transfer fence and invoice fence.
+- BTC chain amounts in satoshis are multiplied exactly by 1000 to create msat claims; ETH amounts remain wei.
+- Same-result retries recover the original credit, never create another.
+
+Claims:
+
+- Underpayments, overpayments, duplicates, late transfers or uncertain outcomes do not automatically qualify for balance credit or become provider revenue.
+- They go to a free confidential claims process with a documented outcome and no silent forfeiture, subject to applicable rights and duties; providers disclose the process before payment.
+- A copied proof, author key or input alone does not establish another payer's ownership.
+- Before any remedy the provider verifies the claimant’s standing and applies one durable transfer-disposition fence so that funds cannot be both credited and refunded.
+- Where the provider cannot establish an eligible recipient, it preserves the liability and handles it under applicable law.
+
+Reorganization and liability:
+
+- A reorganization freezes affected unsettled or unspent claims and triggers reconciliation without negative balances, duplicate credits or invalidation of previously accepted posts.
+- Provider custody, solvency and applicable legal obligations remain separate from signatures.
+- A confirmed transfer that the provider has accepted creates the applicable funding liability even if the provider fails to credit the balance; the affected claimant may pursue the disclosed claims process.
+- The client records the signed invoice and available payment evidence before and after funding; it can request account status and use the free confidential claims channel if a qualifying payment does not produce a credit or admission is not completed.
+- A provider cannot guarantee recovery from a dishonest or insolvent operator.
+
+Evidence disclosure and privacy:
+
+- A user may voluntarily disclose carefully selected evidence to an independent monitor, but the provider and monitor never publish financial evidence or link it to an author without a lawful basis and informed consent; the monitor labels disputed allegations as unverified.
+- Public-chain transfers can still be correlated and redaction cannot guarantee anonymity; clients warn before funding and may suggest a fresh wallet address and third-party funding without promising unlinkability.
+
+### Quote and atomic admission
+
+#### Fee quote
+
+| `POST /v1/fee-quotes` | Rule |
+| --- | --- |
+| Request | FeePreflightRequest `{provider_id,author_id,schedule_id,intent,authorization}` with exact I |
+| Authorization | authorization signs P("fee-preflight", `{provider_id,author_id,message_id,schedule_id}`) |
+| Validation | Validate the intent against the launch schema in addition to the wrapper |
+| Result | Signed FeeQuote `{provider_id,author_id,message_id,schedule_id,quote_id,billable_bytes,network,amount_base_units,preflight_at,expires_at,provider_signature}`, with billable bytes, network, fee and expiry |
+
+Quote rules:
+
+- The provider verifies author/delegation, current time, known target edge, limits and the release-approved schedule before returning the quote.
+- At issuance, the schedule MUST be the one in force at `quote.preflight_at`: the approved schedule for that network with the greatest `effective_at` not later than that instant.
+- The quote expiry is at most 3,600 seconds after `preflight_at`.
+- The provider and client verify both.
+- Historical verification checks the schedule and quote applicable to that receipt, not whether the schedule is active now.
+- `quote_id` is `fyfq2:` plus SHA256 hex of P("fee-quote-id", the quote excluding quote_id and provider_signature); sign P("fee-quote", the quote excluding provider_signature).
+- The quote commits to the message ID derived from the entire intent and to the schedule, fee, asset and expiry; a later fee schedule or the original schedule's retirement does not change an outstanding valid quote before the quote's own expiry.
+- The issuing provider honors it until expiry for otherwise valid new admission, subject to the disclosed service and safety limits; receipt lookup for an already committed admission precedes expiry checks.
+- A changed intent requires a new quote.
+- Provider signatures are assertions, not independent proof of time or solvency.
+
+#### Admission
+
+Before authorizing a debit, the client independently checks the pinned provider, selected author, message ID, exact canonical byte count, approved schedule and asset, fee, quote expiry and its confirmed balance.
+
+| `POST /v1/admissions` | Rule |
+| --- | --- |
+| Request | AdmissionRequest `{provider_id,intent,authorization,quote_id}` |
+| Authorization | The author or valid post delegate signs P("admission", `{provider_id,author_id,message_id,quote_id}`) |
+
+Processing order:
+
+1. Authenticate the author and request, then recover an existing committed result for `(provider_id, author_id, message_id)` before applying new-work checks, including when the retry presents another quote for the same intent.
+2. If an exact committed result exists, return its original receipt without consuming the retry quote, regardless of that quote's binding or current validity.
+3. Only for new work, a quote bound to another intent conflicts with 409 and no debit.
+4. For a new result, serialize quote use, current delegate and target checks, confirmed available balance, idempotency, debit, durable post intent and signed receipt in one commit.
+
+Fee and debit rules:
+
+- The provider collects the fee for the Foundation and owes the full amount under [settlement](./03-economics.md#settlement); it keeps no part of it.
+- A failed check or failed commit creates no debit.
+- Distinct updates and comments each incur their own complete fee; retries never debit twice.
+
+#### Submission receipt
+
+SubmissionReceipt is `{provider_id,author_id,message_id,receipt_id,quote_id,schedule_id,network,amount_base_units,authorization_at,issued_at,provider_signature}`, signed under P("receipt", excluding provider_signature).
+
+- The receipt_id uniquely identifies the provider-local committed admission and debit; it is not a deposit transaction or secret.
+- The authorization_at and issued_at are the actual atomic commit time; verify equality, quote and schedule bindings and delegation validity then.
+- The signed receipt attests the operator's action, not solvency or truthful time.
+- Whether the fee actually reached the Foundation is established separately by a [settlement proof](./03-economics.md#proofs-and-receipt-states): a verifier classifies every receipt as `settled`, `pending_settlement` or `unsettled`, and MUST NOT treat an `unsettled` receipt as admitted.
+
+#### Preparation window and finalization
+
+After admission the author attaches the receipt and signs P("message", complete message without signature).
+
+Preparation window:
+
+- The admitting provider holds an unpublished prepared intent until 30 days after the signed receipt issued_at, using the same UTC arithmetic and an exclusive deadline; disclose this deadline and the absence of an automatic refund before debit.
+- Serialize first public acceptance with expiry: acceptance requires durable storage and verification of the complete signed record and required copy, and acceptance committed before the deadline remains accepted; at or after the deadline the provider MUST refuse first finalization of that unpublished intent.
+- Preserve financial records, durable idempotency evidence, and applicable contractual and statutory remedies; the same receipt and intent cannot be charged again.
+- Fail closed on uncertain deadline state rather than reviving an expired preparation.
+
+Remedy:
+
+- If provider-caused inability prevented timely acceptance, the provider restores the post fee to the same asset balance once or makes an agreed lawful return, preserving any additional rights; investigate through the free claims process, with a single durable remedy disposition and no silent loss.
+- Serialize acceptance and remedy so an already accepted public post is never refunded under this rule due to a lost response.
+
+Retries and new intents:
+
+- Resolve an already accepted identical-message retry before applying the deadline or other new-work checks, including after expiry.
+- An author who deliberately creates a new intent and obtains a new quote may seek a new admission.
+
+Effect of expiry and relays:
+
+- Expiry of this provider-local preparation window does not invalidate the signed receipt, delete a previously finalized public record, or bind another relay.
+- A provider with a timely accepted public record continues its [declared retention obligation](./03-economics.md#retention-and-the-lifetime-vault) and accepted-message retry rules, and delivers the record to the Lifetime Vault.
+- Relays verify IDs, signatures, receipt/author/message bindings, supported profile and local provider trust.
+- Evaluate supersedes edges separately: missing evidence is unresolved and a mismatched edge does not invalidate an otherwise valid post.
+- A provider's financial solvency and complete source coverage remain separate questions.
 
 ## Admission and administration
 
 ### Retry ordering
 
-On admission, first validate the original authorization signature and provider/plan/author/intent binding, then look up the immutable (plan_id, message_id) result. If it exists, return that receipt without reissuing or debiting, before any *new issuance* freshness, expiry, revocation, balance, price, capacity or shutdown checks. The original delegated proof is checked cryptographically and against the recorded issuance, not current revocation state. Only absent results enter new-issuance checks. Never expose another author's receipt by unauthenticated lookup. This rule preserves recovery of a response lost beyond five minutes or after delegate revocation.
+- After authenticating the original author and exact intent, a committed retry returns the original receipt by `(provider_id, author_id, message_id)` before new-work quote expiry, time, balance, revocation, capacity or target checks, even when a different quote is presented for that same intent.
+- If that result exists, return it without consuming the presented quote regardless of the quote binding; only for new work does a quote presented with another intent conflict with 409.
+- No retry creates another debit.
+- This result recovery does not revive an expired, unpublished provider-local preparation window.
+- If the ledger or its recovery checkpoint is uncertain, new financial mutations fail closed while lawful claims and status access remain available.
 
 ### Administrative request authentication
 
-Before signing any service-auth OR sync-auth challenge, the client/root signer MUST compare returned author_id, method, exact canonical resource and body_hash with its locally constructed, user-approved request, verify pinned service_id, enforce a canonical 32-byte random challenge and an expiry later than now and no more than 60 seconds ahead (within the documented clock tolerance). A mismatch is rejected, never displayed as a harmless generic sign-in. The untrusted server response cannot choose what operation the root authorizes. Server-side checks are independently mandatory. Never automatically re-sign a changed body after a challenge failure.
+#### Client-side checks
 
-Root-only account operations use `POST /v1/service-challenges` with `{author_id,method,resource,body_hash}`. The server returns and persists `{challenge,service_id,author_id,method,resource,body_hash,expires_at}` using a fresh random 32-byte base64url challenge and a 60-second expiry. service_id MUST equal the pinned provider/operator key for the authenticated HTTPS endpoint. resource is the exact ASCII path, without query/fragment/dot segments; variable components use canonical UTF-8 percent-encoding. method is GET, POST or PUT. body_hash is SHA256 hex of UTF-8 JCS for JSON, exact raw bytes for octet-stream, or empty bytes for GET. Content-Type is fixed by each route and mismatches are rejected. Sign P("service-auth", challenge object) with author_id and send base64url(JCS(object)) in `ForYou-Service-Challenge` and the signature in `ForYou-Service-Signature`. Check stored equality, endpoint/method/path/body binding, expiry, root signature and author ownership, then atomically consume the challenge. Authenticate again with a fresh challenge after a timeout. Domain separation prevents reuse of sync/posting proofs; posting delegations never authorize these root-only financial operations.
+Before signing any service-auth challenge, the client/root signer MUST:
 
-`POST /v1/invoices` body is `{provider_id,author_id,plan_id,request_id}`; request_id is canonical base64url of 32 random bytes. Require challenge author == body author and body provider == endpoint service_id; verify the immutable plan/offer and eligibility before creating an invoice. Persist request_id and exact body per author atomically with the invoice. A matching retry returns the original invoice, even if expired (client uses a new ID to request another); a conflicting reuse returns 409. Use the same service-auth for renewal-quote requests, with body author_id required, and for `POST /v1/exports` with `{author_id,request_id}`. An export request returns `{job_id,status}` and is idempotent by owner/request_id. `GET /v1/exports/{job_id}` is owner-authenticated and returns preparation status plus an authenticated manifest/file retrieval route; all export resources are bound to that same owner and use service-auth. Authorize before revealing job existence. No public bearer URL or root private key is returned. Export job IDs never grant access by themselves. Regional rights requests by non-account subjects retain the alternative workflows in [the compliance specification](./04-compliance.md).
+- compare returned author_id, method, exact canonical resource and body_hash with its locally constructed, user-approved request,
+- verify pinned service_id,
+- enforce a canonical 32-byte random challenge and an expiry later than now and no more than 60 seconds ahead (within the documented clock tolerance).
 
-### Committed external content and staging
+Further rules:
 
-When a message references primary external content or attachments, it MUST carry content_manifest, a list of at most 64 unique `{content_address,byte_length,media_type}` objects. byte_length is a nonnegative safe integer. Every address uses the raw/SHA256 CID profile below. The top-level primary content_address and every payload.attachments entry MUST occur exactly once in the manifest; attachments are an array of CID strings, not URLs or arbitrary objects. No unused manifest entries are allowed. Ordinary payload.links are navigational links with no storage commitment and MUST NOT be fetched during admission. Sum manifest sizes with checked arithmetic and apply the offer's total-content limit. No recursive URL/DAG traversal or hidden billable attachments.
+- A mismatch is rejected, never displayed as a harmless generic sign-in.
+- The untrusted server response cannot choose what operation the root authorizes.
+- Server-side checks are independently mandatory.
+- Never automatically re-sign a changed body after a challenge failure.
 
-`PUT /v1/staged-content/{content_address}` uploads raw application/octet-stream bytes using root service-auth, subject to the plan's declared staging quota, size and 24-hour staging TTL. Reject size/hash mismatch, unauthorized overwrites and unapproved large bodies before committing. Address verification is raw bytes, not JSON/base64. Mark the object owned by the authenticated author; equal public bytes may be deduplicated internally but never disclose another account's staging existence. Before receipt issuance, verify manifest equality, each staged length/hash, ownership and all replica acknowledgments as required by [the economics specification](./03-economics.md). An author with only a posting delegate may publish inline content or reference previously staged objects; that delegation does not grant administrative upload authority. Staging quota exhaustion returns 429, hash mismatch 422 and missing staged objects during admission 409 `content_not_ready`, all without debit. No manifest is needed for inline-only messages.
+#### Challenge route
+
+Root-only account operations use `POST /v1/service-challenges`.
+
+| `POST /v1/service-challenges` | Rule |
+| --- | --- |
+| Request | `{author_id,method,resource,body_hash}` |
+| Result | The server returns and persists `{challenge,service_id,author_id,method,resource,body_hash,expires_at}` using a fresh random 32-byte base64url challenge and a 60-second expiry |
+
+| Challenge field | Rule |
+| --- | --- |
+| service_id | MUST equal the pinned provider/operator key for the authenticated HTTPS endpoint |
+| resource | The exact ASCII path, without query/fragment/dot segments; variable components use canonical UTF-8 percent-encoding |
+| method | GET, POST or PUT |
+| body_hash | SHA256 hex of UTF-8 JCS for JSON, exact raw bytes for octet-stream, or empty bytes for GET |
+
+Signing and verification:
+
+- Content-Type is fixed by each route and mismatches are rejected.
+- Sign P("service-auth", challenge object) with author_id and send base64url(JCS(object)) in `ForYou-Service-Challenge` and the signature in `ForYou-Service-Signature`.
+- Check stored equality, endpoint/method/path/body binding, expiry, root signature and author ownership, then atomically consume the challenge.
+- Authenticate again with a fresh challenge after a timeout.
+- Domain separation prevents reuse of posting proofs; posting delegations never authorize these root-only financial operations.
+
+#### Issuance limits
+
+Challenge issuance is unauthenticated and MUST be bounded before allocating durable state.
+
+- Limit an uncompressed request to 4096 UTF-8 bytes and resource to 2048 ASCII bytes; validate the canonical DID, method, body hash, resource grammar and a supported method/route shape before persistence.
+- Do not reveal account existence through pre-auth error distinctions.
+- Enforce disclosed global and per-source count, byte, work, queue and concurrency limits, reserve protected capacity for legitimate control/recovery, evict expired entries promptly, and return 429 or 503 on saturation.
+- Do not require a pre-existing account merely to request a challenge: onboarding also needs this route.
+- These limits mitigate abuse, not guarantee access under a distributed attack.
+
+#### Consumption and recovery
+
+- Challenge consumption and its protected issuance generation MUST be linearizable across replicas.
+- Never accept a challenge twice, including after crash, failover or backup restore.
+- Preserve used markers until every affected challenge is irrevocably expired, or durably fence and invalidate the entire prior issuance generation before serving again.
+- A replacement generation MUST be unique, recorded in an independently protected recovery domain before reopening and never rolled back or reused; old-generation challenges are rejected regardless of their displayed expiry.
+- A lost or uncertain generation, consumption state or clock blocks affected authentication until old challenges are safely invalidated; clock rollback MUST NOT revive expiry.
+- Exact authorized operation retries use a fresh challenge and their operation-specific durable idempotency rules, not a replayed service-auth proof.
+
+
+## Post content
+
+### Text payloads and external media references
+
+ForYou stores complete text and protocol metadata, not image or video bytes.
+
+| Payload field | Rule |
+| --- | --- |
+| `payload.content_format` | Exactly `text/plain` or `text/markdown` |
+| `payload.text` | Required and may be empty only when at least one media slot is present |
+| `payload.media_slots` | Optional; contains at most 16 signed `{id,url,kind,sha256,size_bytes?,alt_text?}` entries |
+
+| Media slot field | Rule |
+| --- | --- |
+| id | Matches `[a-z0-9_-]{1,32}` and is unique within the post |
+| kind | image or video |
+| url | Restricted HTTPS |
+| sha256 | Exactly 64 lowercase hexadecimal digits |
+| size_bytes (optional) | The exact byte length of the complete media object as an integer from 1 to 2^53−1 |
+| alt_text (optional) | Descriptive plain text of at most 2000 Unicode scalar values |
+
+- There are no resolution or dimension fields in the protocol.
+- Slot IDs, URLs, digests and text are included in I and its fee bytes.
+- Syntactic validation and admission never fetch slots.
+- The application or user selects and configures the external host; media bytes and credentials remain outside the network.
+
+#### Media digest and fetching
+
+- sha256 commits to the exact complete media object bytes returned with no HTTP content encoding (`Content-Encoding: identity` or absent), after transfer framing is removed.
+- After the reader's separate consent, request identity encoding and stream the object into bounded temporary storage; reject encoded responses, oversized or incomplete transfers, hash mismatches and unsupported content.
+- When the slot declares size_bytes, the client MUST show or apply that size before fetching, MUST abort a transfer that exceeds it and MUST reject an object whose length differs from it.
+- A slot without size_bytes has unknown size and is fetched only under the client's own transfer limit.
+- Verify SHA-256 over the entire object before any decoder or renderer sees the bytes, then render only that same verified immutable object.
+- A URL that changes its contents cannot silently change the signed post.
+- The hash authenticates bytes against the author's signed reference, not copyright, safety, truth or availability.
+- Video therefore requires complete download and verification before playback; adaptive playlists, manifests, progressive playback and secondary segments are unsupported until a separately specified per-chunk integrity extension exists.
+- Clients may enforce their own download, decode and memory limits; no image-resolution fields are part of the protocol.
+
+#### Inline media binding in Markdown
+
+For `text/markdown`, parse CommonMark 0.31.2 with no extensions (no tables, strikethrough, task lists or extended autolinks). Every construct other than the links, images and references this document makes active is formatting only and can cause no fetch or navigation. `text/plain` has no active construct at all. All text a client outputs, including labels and `alt_text`, is escaped for the context it is placed in.
+
+- Only an inline image node `![label](fy-media:<id>)` with no title, whose parsed destination is exactly `fy-media:<id>` with no percent escape, query, fragment or extra suffix, binds a matching declared slot inline. A reference-style image, an image with a title, an autolink or any other form binds nothing. An image node naming an undeclared slot binds nothing and MUST NOT trigger a fetch.
+- External image destinations and ordinary links never create media or trigger a fetch.
+- A declared slot that no image node references is still a declared slot, eligible for display under the same per-origin consent and hash checks.
+- Where and whether a client shows slots is a local choice outside this protocol.
+- Code spans, code blocks, escaped examples and raw HTML never create slots.
+- Clients apply their own bounded transfer, decoding, dimensions and time limits without putting those measurements in the signed protocol.
+
+#### Media hosting responsibilities
+
+- The user or app selects and configures its media host/CDN, computes the complete object digest and supplies the URL and digest before signing the post.
+- ForYou neither chooses a mandatory CDN nor provisions accounts, handles upload secrets, validates remote bytes during admission, pins, proxies, caches, transcodes or guarantees media availability.
+- Admission MUST NOT fetch URLs or depend on their current reachability.
+- A receipt binds the signed text, URL and digest; it does not prove that external media is safe, owned by the author or available.
+- A host that changes bytes causes a digest mismatch rather than a silent content change.
+- A replacement is handled by a newly signed post where needed.
+
+#### Media URLs and availability
+
+- Public media URLs are not secrets.
+- Clients MUST NOT publish upload/API credentials or private authorization tokens as media references.
+- A CDN may change the bytes behind a URL or stop serving it.
+- Unavailable media never invalidates the post or its text.
+- Remote display is an optional client action governed by the privacy and safe-fetch rules, not a network storage obligation.
+- There is no private-preference or media-hosting channel in the core protocol.
+
+### Links in post text
+
+#### Parsing
+
+Treat all post text as untrusted. For `text/markdown`, parse [CommonMark 0.31.2](https://spec.commonmark.org/0.31.2/) into an abstract syntax tree before rendering.
+
+- This profile supports ordinary inline links `[text](destination)` without a title and URI autolinks `<https://...>`.
+- Bare URLs are plain text and are not auto-linked.
+- Reference-style links, link titles, embedded HTML links, email autolinks and other link syntaxes have no active-link behavior; display their source or visible label as inert text.
+- Code blocks and code spans stay literal.
+- Render raw HTML literally; never execute markup, scripts or event handlers.
+- Never reparse rendered text, decoded entities or a link label as fresh Markdown or HTML.
+
+#### Destination validation
+
+For each supported link, validate the **parsed destination** after CommonMark's specified backslash-escape and entity processing, before assigning any navigation behavior.
+
+- The parser or a source-span check MUST distinguish inline links from reference-style links and detect an explicit title; an AST that has discarded that distinction is insufficient to authorize navigation.
+- Reject a destination if its source or resulting parsed value cannot be represented and checked consistently by the actual navigation stack; never perform repeated decoding, scheme repair or implicit conversion of an invalid value.
+- For external navigation, the exact resulting string MUST satisfy the same restricted HTTPS profile as media references: lowercase `https://`, 1–4096 ASCII characters, no userinfo, backslashes, control characters or invalid escapes, and the authority, A-label, port and path rules in [External URL validation](#external-url-validation).
+- The actual navigated URL MUST be exactly the checked destination, except that the browser does not send fragments to the server.
+- Schemes such as `http`, `javascript`, `data`, `file`, `blob` and `mailto`, plus invalid or overlength destinations, render as plain text.
+- Do not turn a rejected URL into a relative link, invoke a custom protocol handler or navigate automatically.
+
+#### External navigation
+
+- Rendering or hovering an external link MUST NOT trigger a network request, DNS lookup, preview, prefetch, preload, preconnect, background security scan or tracking ping, by a provider or client.
+- Only an explicit click followed by an informed confirmation permits external navigation.
+- The confirmation displays the full checked destination, including the actual ASCII A-label hostname and nondefault port, separately from the author's link text; this also handles URL-looking labels that differ from the target.
+- Do not replace punycode with a Unicode hostname or hide the actual authority.
+- Open with equivalent `noopener` and no-referrer isolation, suppress hyperlink auditing/ping and never forward ForYou credentials.
+- If the client cannot enforce these properties, leave the destination inert.
+- Once the user leaves, the external site's own redirects and behavior are outside this profile; the initial confirmation is not permission for the client to fetch redirects or previews in the background.
+
+#### In-network links
+
+The in-network link form is a title-free inline Markdown link to `fy-ref:<id>`, where id exactly matches one declared signed reference below.
+
+- A missing or malformed ID, reference-style link, image node, code span or direct `fy:<target>` destination is inert text.
+- Never invoke an OS URI handler.
+- On an explicit user action, resolve the declared target only through the user's already approved providers, apply bounded retrieval and cryptographic/trust verification, and show unresolved or incomplete status if evidence is unavailable.
+- This action may reveal reader interest to the selected provider.
+- Never derive a web host from an identifier or infer an authenticated name from a label.
+- A `reply_to` remains an independent exact signed message ID and need not be repeated in refs.
+- `@name` and hashtags are plain text, not authenticated identity, index entries or notifications.
+
+### Signed structured references
+
+Optional `payload.refs` is a signed array of at most 32 closed `{id,target}` entries.
+
+| Ref field | Rule |
+| --- | --- |
+| id | Uses `[a-z0-9_-]{1,32}` and MUST be unique within refs |
+| target | A canonical `fy1:` message ID or canonical Ed25519 `did:key` |
+
+- Validate the entire encoding and reject duplicate targets, unknown fields and malformed encodings before debit.
+- Ref IDs and media-slot IDs have separate namespaces.
+- The exact refs array is part of I, its signature and billable bytes.
+- No target existence check, remote lookup, notification, consent or authority is implied by a reference, and admission never fetches it.
+
+Activation and display:
+
+- Only a parsed, title-free CommonMark inline link whose exact destination is `fy-ref:<id>` activates a matching declared reference.
+- Reject percent escapes, query strings, fragments and extra suffixes in that destination.
+- Labels are untrusted escaped text.
+- Never present the author's label as a verified name: the canonical target MUST be available to the reader, and labels and `alt_text` are isolated from the bidirectional context around them.
+- A missing reference displays inert text.
+- Indexers may scan verified signed refs as author-declared references, but an unreferenced entry or inert markup does not prove a visible mention, target existence, consent or permission to notify; report incomplete source coverage.
+
+Relation to media and fees:
+
+- Links and in-network references never create media slots or authorize media fetching.
+- Only declared signed slots are eligible for display, subject to the user's media consent and safe-fetch rules.
+- Inline image syntax using a remote URL is inert.
+- All link text and markup remain part of the signed post text and count as ordinary canonical intent bytes for the fee; the client does not normalize or rewrite signed text.
+- These requirements constrain rendering and fetches, not an operator's independent legal duties or a user's manually copied URL.
+
+### External URL validation
+
+Media references use the following restricted HTTPS URL profile, based on [RFC 3986 component syntax](https://www.rfc-editor.org/rfc/rfc3986) with additional ForYou restrictions.
+
+- Validate at admission, relay and import without network access, before charging or accepting the object.
+- JSON Schema is a preliminary shape check; format annotations and the schema regex are not a substitute for these semantic checks.
+- Never repair or normalize a signed URL silently.
+
+#### Scheme and authority
+
+- Require 1–4096 ASCII characters, lowercase `https://`, no whitespace, control characters, backslashes or userinfo.
+- Authority is one of:
+  - a lowercase DNS name (labels 1–63 ASCII letters/digits/hyphens, no leading/trailing hyphen, total at most 253 characters, no trailing dot, final label containing a letter and not starting `0x`),
+  - canonical dotted-decimal IPv4 without leading zeroes, or
+  - bracketed lowercase compressed IPv6 without a zone identifier.
+- Internationalized names MUST already be valid IDNA2008 A-labels; reject invalid A-labels, do not perform implicit Unicode conversion.
+- Optional port is canonical decimal 1–65535 with no leading zeroes.
+- No percent escapes in authority.
+- Reject alternative numeric host forms, malformed IP literals, empty authority/port, or disagreement between this validation and the actual network stack's parsed scheme, host or port.
+- Canonical authority is a protocol restriction, not a DNS existence or public-address assertion.
+
+#### Path, query and fragment
+
+- Path is empty or starts `/`; path characters are ASCII letters/digits plus `-._~!$&'()*+,;=:@/` and valid `%HH` triplets.
+- Query and fragment additionally allow `?`.
+- Reject malformed escapes and escapes for ASCII controls (00–1F,7F) or backslash (5C), case-insensitively.
+- Preserve the original path/query/fragment bytes for signing and request semantics; do not repeatedly decode escapes or reinterpret decoded bytes as authority.
+- Fragment is never sent in the network request.
+- Fetch-time destination checks below remain mandatory even after syntactic acceptance.
 
 ### Final message budget
 
-Content size is validated before charging: prepare the actual bounded receipt (canonical JCS at most 8192 bytes; receipt_id at most 128 UTF-8 bytes), insert it and the computed message_id into I, and use an 86-character signature placeholder to compute the exact JCS byte length of the eventual complete message. Reject if greater than 1 MiB with 422 `message_too_large`, before durable debit or paid activation; release provisional reservations. The admission JSON wrapper also has a 1 MiB input limit. Clients send the final message as JCS so cosmetic whitespace cannot exceed its admitted budget. Recompute if any receipt field changes before commit; a final valid signature has the same encoded length as the placeholder.
+Content size is validated before charging:
 
-### Public state transitions
+1. Prepare the actual bounded receipt (canonical JCS at most 8192 bytes; receipt_id is canonical unpadded base64url for 32 random bytes).
+2. Insert it and the computed message_id into I, and use an 86-character signature placeholder to compute the exact JCS byte length of the eventual complete message.
+3. Reject if greater than MAX_MESSAGE_BYTES with 422 `message_too_large` before the atomic debit/admission; release provisional reservations.
 
-Payload shapes in the launch schema are normative; semantic rules here are additional. Replies require reply_to and thread_id: obtain the target's verified message, require thread_id equal its thread_id if it is a reply, otherwise its message_id. Quote/counterpoint/recommend targets must be verified before assigning their effects. Unknown targets remain pending/unresolved, not fabricated authorship or graph counts. Referencing an unavailable or withdrawn target does not delete dependent messages.
+Further rules:
 
-A withdrawal targets a verified message by the same author_id; a delegate additionally needs withdraw scope. It produces a monotonic tombstone at compliant indexing/rendering paths: keep only lawfully retained evidence, suppress normal content display, show withdrawn status, and do not restore because an older post is replayed. A withdrawal cannot undo another withdrawal or seize another author's content. Byte deletion and legal preservation follow [the compliance specification](./04-compliance.md); this is not global erasure.
+- The admission JSON wrapper also has a MAX_MESSAGE_BYTES input limit.
+- Clients send the final message as JCS so cosmetic whitespace cannot exceed its admitted budget.
+- Recompute if any receipt field changes before commit; a final valid signature has the same encoded length as the placeholder.
 
-recommend, follow_source, follow_topic and subscribe_thread payloads have boolean active, optional with semantic default true without changing signed bytes. active=false retracts that actor's corresponding relationship. Reduce by (author_id,type,target), choosing the greatest (timestamp,message_id) among verified admitted actions; preserve evidence, count at most one active relationship per actor/target, and never sum duplicates. Paid Sybil actors are still multiple actors; these counts are advisory. alias_registration is self-namespaced and its greatest (timestamp,message_id) determines the displayed profile. Timestamp ordering permits at most the issuance skew allowed above; it is not global consensus. No absent receipt, unknown target or unsigned index claim changes state.
+### Posts, comments and versions
 
-Reducers choose the newest verified event INCLUDING tombstoned events. If that winner is withdrawn, the effective relationship is inactive and the alias/profile display is neutral (identity fingerprint only); do not fall back to an older event or resurrect a follow by removing its withdrawn active=false event. A separately newer valid event may establish new state. follow_source targets are canonical DIDs and follow_topic targets are canonical lexical topic keys; they do not require a retrievable message. subscribe_thread and other message-targeted actions require a verified target before attributing public effects. Withdrawal markers/evidence retained for reduction must comply with 04; if legally removed history makes reduction uncertain, mark state unknown rather than restoring an older claim.
+#### Posts and updates
 
-Alias registrations require namespace exactly equal to author_id. Reject other namespaces in this profile; provider handles need a future explicit grant protocol. Display identity fingerprints alongside aliases.
+A post is immutable signed text with optional external media references, `reply_to` and `supersedes`.
+
+- A post without supersedes is an original; an update is another complete post whose signed `payload.supersedes` names the immediate prior version's canonical message_id.
+- The field is included in the signed intent and message ID.
+- Every update uses the normal post admission, full per-record fee, independent receipt and its own retention period; it never modifies or deletes earlier bytes.
+- A delegate needs the normal `post` scope for an update.
+- There is no public withdrawal or author-delete message.
+
+#### Supersedes edge validity
+
+- A supersedes edge is established only after the client independently verifies the target as a valid post, including ID, signatures, historical admission proof and its locally configured provider trust, and verifies that both records have the same author_id.
+- Reject self-reference.
+- Admission MUST reject a known, verified cross-author target before requesting payment; it does not fetch arbitrary remote targets.
+- An absent, inaccessible, untrusted or unprocessable target does not prevent admission: retain the independently valid new post with an unresolved reference, without claiming that it updates another post.
+- If later evidence proves a cross-author target, the edge is invalid; do not merge, suppress, or invalidate either independently valid post or reverse an already committed receipt.
+- Reverification may resolve an unresolved same-author edge without another payment.
+- Legal restrictions and provider-local availability still apply.
+
+Thread identity:
+
+- To preserve thread identity, a valid update edge also requires exactly the same `reply_to` value as its target, treating absence as distinct from any ID.
+- A known mismatch fails before requesting payment; a mismatch discovered later invalidates only the edge.
+
+Delegated updates: a `post` delegate can create updates of any post by that author, including one created by another delegate; the root-signing client MUST disclose this authority when granting the scope.
+
+#### Version graph
+
+- Clients build a graph only from locally known, verified same-author edges.
+- Detect repeated IDs, self-references, cycles, conflicting ID claims and malformed edges; bound traversal by depth, nodes, fanout, time and storage.
+- Missing or restricted intermediates leave the affected chain unresolved; never infer a bridge from IDs alone.
+- Preserve every independently valid version and all verified branches, even when a different version is selected for display.
+- A component may be incomplete because sources and retention differ; never claim global completeness or currentness.
+
+For a fully verified rooted component, identify its known terminal leaves and select one by applying these rules in order:
+
+1. A leaf signed directly by the root key (`signer_id` equals `author_id`, with no delegation) is preferred over every delegate-signed leaf.
+2. Among the remaining candidates, prefer the greatest receipt `issued_at`.
+3. Among those, prefer the ASCII-smallest `message_id`.
+
+- Rule 1 lets the author override a fork created with a delegate key by signing an update with the root key.
+- Rule 2 uses the admitting provider's signed time, which a message ID cannot be ground to influence.
+- This deterministic local default is a display preference, not a consensus decision, proof of real-world time or the author's final intent.
+- Concurrent forks may both be admitted and paid.
+- Recompute when new valid records arrive or the local source view changes, disclose forks and incomplete coverage.
+- A compromised delegate can publish a valid fork until revoked.
+
+#### Comments
+
+- A comment is an ordinary paid post whose immutable `reply_to` names any version of its parent.
+- The signed reference is never rewritten.
+- Where a client has verified a same-author version chain it may show the locally selected current version for context while preserving access to the exact referenced version and indicating that context changed.
+- Missing or restricted parents remain placeholders; they do not invalidate the child.
+- Reconstruct discussion trees with bounded traversal and cycle detection; no authoritative thread object, global index or complete cross-provider reply set is required.
 
 ## Delegation, revocation and time
 
-A delegation additionally requires provider_id and a nonempty scope array containing permitted baseline public message types. It is root-signed and author_id/signer_id must match the enclosing message. Providers and relays MUST reject unless the enclosing message_type is a member of the signed scope. Validity is half-open [valid_from, valid_until), maximum lifetime 24 hours. Provider identity in the delegation must match the receipt provider, preventing failover to an uninformed issuer. Clients may use multiple providers with separate delegations.
+### Delegation object
 
-Root-authorized revocation is `POST /v1/delegations/revoke` with `{author_id, provider_id, delegation_id, signature}` signed with label `revoke`. It has no client timestamp and no expiry. The provider serializes revocation with issuance in the same durable ledger, records a permanent tombstone keyed by (author_id, delegation_id), and acknowledges only after commit. Repeated revocations return success. Root authentication is sufficient; exhaustion of a paid plan MUST NOT prevent revocation. Never resurrect a revoked ID. On an ambiguous timeout retry until acknowledged; revocation is effective at that provider's ledger commit, not at button press. The response uses 200 `{status:"revoked"}` or 503 if not durable.
+A delegation requires provider_id, a provider-signed AuthorizationEpoch and a nonempty scope array containing permitted baseline public message types.
 
-New issuance uses provider wall-clock time, requires a message timestamp no more than 300 seconds old or 60 seconds in the future, checks delegation validity at issued_at, and checks the revocation tombstone. Clock uncertainty exceeding 60 seconds stops issuance. A compromised delegate cannot evade revocation by backdating. Historical receipts issued before revocation remain valid; a trusted provider attests ordering. Relays verify delegation validity at receipt issued_at, and reject receipts more than 60 seconds in the future relative to local clock. They do not expire historical receipts merely because the delegation later expires. Provider dishonesty about time or revocation is a disclosed trust failure, not prevented by signatures. Root loss/compromise cannot be recovered by this protocol; clients must provide secure root backup and must not advertise guaranteed recovery.
+- It is root-signed and author_id/signer_id MUST match the enclosing message.
+- Compute delegation_id as `fyd1:` plus lowercase SHA256 hex of P("delegation-id", the delegation excluding delegation_id and delegation_signature); sign P("delegation", the delegation excluding delegation_signature).
+- Limit the exact JCS delegation to 4096 bytes.
+- Verify the epoch certificate, its provider/author bindings and the content-derived ID before accepting.
+- Providers and relays MUST reject unless the enclosing message_type is a member of the signed scope.
+- Validity is half-open [valid_from, valid_until), maximum lifetime 24 hours.
+- Provider identity in the delegation MUST match the receipt provider, preventing failover to an uninformed issuer.
+- Clients may use multiple providers with separate delegations.
+
+### Authorization epoch
+
+An AuthorizationEpoch is the closed schema `{epoch_id,provider_id,author_id,epoch_sequence,activated_at,nonce,provider_signature}`.
+
+| Field | Rule |
+| --- | --- |
+| nonce | 32 canonical random bytes |
+| epoch_sequence | A positive safe integer |
+| epoch_id | `fye1:` plus lowercase SHA256 hex of P("authorization-epoch-id", the certificate excluding epoch_id and provider_signature) |
+| provider_signature | Signs P("authorization-epoch", the certificate excluding provider_signature) |
+
+- Activation and certificate persistence are one durable commit.
+- Historical verification checks this certificate, its ID, provider/author bindings and activation by receipt authorization_at, the root-signed delegation, scope, and delegation validity at authorization_at.
+- A provider receipt attests valid authorization at that time; no signature proves honest revocation ordering.
+
+### Revocation and emergency controls
+
+- A provider that supports delegation MUST offer free root-authorized emergency revocation, including for a valid delegation it has not previously seen, with disclosed bounded capacity and a safe fallback when that capacity is exhausted.
+- It MUST serialize revocation and emergency controls with new receipt issuance, reject stale authorization, and never reactivate a revoked delegation or retired epoch through rollback, recovery or compaction.
+- An uncertain authorization state fails closed.
+- Previously committed admissions remain recoverable and finalizable within their disclosed provider-local preparation window even after revocation; accepted public records remain recoverable subject to applicable disclosure rights.
+- Revocation does not delete public content.
+- Internal state storage is provider-specific; the routes below are not.
+
+A provider that supports delegation MUST implement these routes. Each uses fresh root [service-auth](#administrative-request-authentication), and each inner signature is made by the root key.
+
+| Route | Body | Signed bytes | Result |
+| --- | --- | --- | --- |
+| `POST /v1/authorization-epochs` | AuthorizationEpochEnroll | P("authorization-epoch-enroll", body excluding `author_signature`) | 201 AuthorizationEpochState with a new active epoch, or 200 with the existing state on an exact retry |
+| `POST /v1/authorization-epochs/control` | AuthorizationEpochControl | P("authorization-epoch-control", body excluding `author_signature`) | 200 AuthorizationEpochState. `freeze` stops all delegated admission; `rotate` retires the current epoch, invalidating every delegation issued under it, and activates the next `epoch_sequence`. 409 when `expected_epoch_id` or `expected_state_revision` is stale |
+| `POST /v1/authorization-epochs/state` | `{author_id,challenge}` with a fresh canonical random 32-byte challenge | none beyond service-auth | 200 AuthorizationEpochStateResponse, signed under P("authorization-epoch-state-response", response excluding `provider_signature`) and echoing the challenge |
+| `POST /v1/revocations` | RevocationRequest | P("revoke", body excluding `signature`) | 200 `{delegation_id,status:"revoked"}`; idempotent. The embedded delegation lets the provider revoke a delegation it has not seen |
+
+- AuthorizationEpochState is signed under P("authorization-epoch-state", state excluding `provider_signature`).
+- `state_revision` increases by exactly one with every committed change.
+- A request whose `not_after` has passed, or whose nonce was already used with different content, is rejected.
+
+### Time
+
+- With already confirmed funding, admission uses provider wall-clock time and requires a message timestamp no more than 300 seconds old or 60 seconds in the future and a delegation valid at the atomic authorization_at/issued_at.
+- Initial deposit confirmation is a separate earlier operation; create a fresh intent after funds are available.
+- Clock uncertainty exceeding 60 seconds stops issuance.
+- Relays reject receipts more than 60 seconds in the future relative to local clock and do not require a live revocation lookup for historical receipts.
+- A lost root key cannot be recovered by this protocol; see [key succession](#key-succession) for planned rotation.
+
+## Key succession
+
+A provider key or an author root key can name its successor with a KeySuccession: `{succession_id,old_id,new_id,effective_at,old_signature,new_signature}`.
+
+| Field | Rule |
+| --- | --- |
+| `old_id`, `new_id` | Distinct canonical `did:key` values |
+| `succession_id` | `fyks2:` plus lowercase SHA256 hex of P("key-succession-id", `{old_id,new_id,effective_at}`) |
+| `old_signature` | Made by `old_id` over P("key-succession", `{old_id,new_id,effective_at}`) |
+| `new_signature` | Made by `new_id` over P("key-succession-accept", `{old_id,new_id,effective_at}`) |
+
+Both MUST verify.
+
+| Route | Auth | Result |
+| --- | --- | --- |
+| `GET /v1/successions/{did}` | Public route | 200 `{successions:[...]}` with every succession the provider holds whose `old_id` is that DID, or 404 `{status:"not_found"}` |
+| `POST /v1/successions` | Needs no service-auth because the object authenticates itself | Publishes one; it is free, and it is subject to ordinary rate limits |
+
+Verification rules:
+
+- A signature by `old_id` remains valid for objects whose provider-signed time (`issued_at` or equivalent) is before `effective_at`. After `effective_at`, a verifier that accepts the succession expects `new_id`.
+- For a provider key, committee monitors accept settlement claims from `new_id` only after they have verified the succession, and only when `new_id` has signed no settlement claim, neither key is part of another succession, and `effective_at` is not earlier than the `period_end` of a claim the old key has already published. The new key continues the old key's claim chain, and settlement deposits keep carrying the chain's first key. Old receipts stay verifiable under `old_id`.
+- For an author key, a succession is an advisory identity link. A client MAY present `new_id` as the continuation of `old_id` and MUST show that the link was asserted by the old key.
+- Two valid successions with the same `old_id` and different `new_id` values are a conflict. The link is then unresolved, and a client MUST NOT follow either automatically.
+- A succession cannot be withdrawn. It does not transfer provider balances, delegations or receipts.
+
+A succession does not recover a lost key, and a thief who holds the old key can publish one. It serves planned rotation by a provider or author who still controls the old key.
 
 ## Acceptance, retries and conflicts
 
-Acceptance is host-local. `POST /v1/messages` returns 201 `{message_id,status:"accepted"}` after durable acceptance; an identical intent retry returns 200 with the same fields. Different valid receipts for the same intent do not create duplicate posts or engagement. Preserve the evidence separately; deduplicate by ID after full validation. A payload that claims the ID of another intent fails recomputation and returns 422 `id_mismatch`. A genuine hash collision is quarantined: retain both conflicting canonical intents as evidence, serve neither as the unique object, and return 409 `id_collision`; no first-arrival winner. Never reserve an ID from an unverified request. Separate accepted, stored, indexed and retrievable states; acceptance is not a global consensus or availability guarantee. API success requires authenticated TLS to the operator; it is not a portable signed acceptance certificate.
+Acceptance is host-local.
 
-At the admitting provider, the paid [finalization contract](./03-economics.md#service-lifecycle) governs success: an existing accepted record with incomplete contracted replica finalization MUST resume that work and MUST NOT return 200/201 merely because its ID exists. A failure returns 503 without another debit. Independent relays retain host-local acceptance semantics and must not claim the admitting provider's service has finalized.
+- `POST /v1/messages` returns 201 `{message_id,status:"accepted"}` after durable acceptance; an identical intent retry returns 200 with the same fields.
+- Different valid receipts for the same intent do not create duplicate messages. Preserve the evidence separately; deduplicate by ID after full validation.
+- A payload that claims the ID of another intent fails recomputation and returns 422 `id_mismatch`.
+- If distinct fully verified intents genuinely share one ID, reject the conflict with 409 `id_collision`, record a minimal restricted incident, and serve neither as uniquely identified until resolved.
+- Never put private content in public logs or reserve an ID from an unverified request.
+- Separate accepted, stored, indexed and retrievable states; acceptance is not a global consensus or availability guarantee.
+- API success requires authenticated TLS to the operator; it is not a portable signed acceptance certificate.
 
-## Private-state encryption and synchronization
+At the admitting provider:
 
-For private_state_update the only allowed envelope fields are message_id,author_id,timestamp,message_type,version,signature,payload. The only payload fields are state_kind,encrypted_state,encryption_scheme,encryption_scope,device_group_id,state_sequence,supersedes. Reject plaintext state_summary, keywords, topic tags, content hints, delegation and unknown extensions. Preferences belong solely inside ciphertext. The selected sync host still sees author, group/kind, sequence, supersedes linkage, recipient key identifiers, timing and sizes; encryption does not hide this metadata. Private state MUST NOT enter public admission, gossip or author-query responses, regardless of a valid root signature.
+- The prepared admission and its receipt are not public acceptance.
+- Public acceptance is the durable commit of the complete verified signed record and required storage copy before the preparation deadline; the provider returns 201 only after that commit.
+- On an identical retry, recover this accepted state before testing the deadline; it never reverts to unpublished preparation or incurs another debit.
+- If the committed record later requires storage repair, the provider MUST resume that work even after the preparation deadline and MUST NOT return 200/201 merely because an ID exists without meeting its applicable storage obligation.
+- A failure returns 503 without another payment and does not erase the earlier acceptance or its continuing obligations.
 
-Private state is root-signed only in profile 1.0: reject signer_id, delegation and public payment/admission fields. This avoids implying that provider revocation controls unauthenticated offline sync. Read/write sync requires proof of root-key possession over a server-generated single-use 32-byte challenge bound to the service identity, HTTP method and resource; expire after 60 seconds and atomically consume it. Never expose private state or its summaries through public metadata, errors or indexes. Encrypted metadata still reveals timing and size to the chosen sync host. Server quotas and retention must be explicit.
+Independent relays retain host-local acceptance semantics and MUST NOT claim the admitting provider's service has finalized.
 
-Encryption is X25519 + HKDF-SHA256 + XChaCha20-Poly1305 combined mode. Encode binary fields as canonical unpadded base64url. Fresh CSPRNG content_key (32 bytes), content nonce (24 bytes), ephemeral X25519 private key per recipient, and wrap_nonce (24 bytes) are required for every new encryption. Reject an all-zero X25519 shared secret. Recipient public keys are separate 32-byte encryption keys; kid equals base64url of that key. Reject duplicate recipients and more than 32 recipients; sort by kid using ascending ASCII order. Envelope v is exactly 1.
+## Message retrieval and optional external display
 
-Let C = `{author_id, device_group_id, state_kind, state_sequence, timestamp, version}` from the enclosing message and payload. Let A = P("private-state", C). Plaintext is UTF-8 JCS of the state object. Encrypt using content_key, nonce and A, appending the 16-byte tag to ciphertext. For each recipient let R = `{kid, recipient_pubkey, epk}`. HKDF uses IKM = X25519 shared secret, salt = 32 zero bytes, info = P("private-wrap", R), output length 32. Wrap content_key with this derived key, wrap_nonce and AAD = `A || P("private-wrap", R)`; wrapped_key is exactly 48 bytes including the tag. Reject decryption or key-validation failures without exposing partial plaintext. Verify outer signature and ID before decryption. The entire envelope, recipient list, sequence and supersedes are covered by the outer signature. Encryption context intentionally excludes message_id to avoid a circular hash dependency.
+- Before author attribution or actions, verify the actual signed JSON message and its ID; index hints are advisory.
+- The full post text is inline.
+- There is no `/v1/content` binary/base64 media retrieval endpoint or CID object-storage contract.
+- Signed-message/ordinary JSON limits remain 1 MiB, with the explicitly defined paginated discovery-response exception in portability.
 
-For each (author_id, device_group_id, state_kind), the sync host atomically accepts sequence 0 initially, then exactly previous+1, requiring supersedes to contain exactly the current head ID (empty initially). Retry of the same ID is idempotent; stale/concurrent writes return 409 with current head to an authenticated owner only. Clients fetch, merge explicitly and re-encrypt at the next sequence. Never silently choose one concurrent private edit. Retain a local maximum sequence/head; refuse rollback from a host. A fresh device obtains a trusted head during pairing; without one a malicious host can omit history, which encryption does not detect. Device removal rotates the content key and recipient set for subsequent snapshots; it cannot erase previously decrypted material.
+### Media consent
 
-### Exact private-sync HTTP authorization
+External media is optional and outside ForYou storage/service guarantees.
 
-The only sync resource is `/v1/private-state/{author}/{group}/{kind}`, where each component is canonical RFC 3986 percent-encoding of UTF-8 (unreserved bytes unchanged, other bytes uppercase hex). No query, fragments, alternate slash forms or dot segments are allowed. `POST /v1/private-state/challenges` accepts `{author_id, method, resource, body_hash}`; method is GET or PUT, resource is the exact path above and must contain the same author_id. body_hash is lowercase SHA256 hex of JCS(the PUT message), or SHA256 of the empty byte string for GET. Requests and responses are limited to 1 MiB. Rate-limit challenge issuance by source and author without granting resource access.
+- Before any media request, DNS prefetch, preconnect or preload, require a reader gesture for that item or an explicit revocable preference for its exact origin (scheme, host, effective port).
+- A publisher's CDN choice is not reader consent. A per-origin preference lets that origin observe when the reader loads media from it; the preference MUST be revocable.
+- Redirects or secondary resources at a new origin require separate approval before contact.
+- Revocation cancels pending loads and prevents subsequent requests; local text reading remains available.
+- Apply the app's local exclusions and provider-scoped restriction state before scheduling loads.
 
-The server returns `{challenge, service_id, author_id, method, resource, body_hash, expires_at}` where challenge is canonical base64url of 32 random bytes, service_id is its configured signing DID, and expiry is server time plus 60 seconds. Persist the exact object. The client verifies service_id against its configured TLS endpoint identity and sends the object as base64url(JCS(object)) in `ForYou-Sync-Challenge` and a root Ed25519 signature over P("sync-auth", object) in `ForYou-Sync-Signature` on GET or PUT of resource. The server checks every field against its stored challenge, endpoint, method, path, body and clock, verifies against author_id, and atomically consumes the challenge before executing the request. A failure never returns private data. GET returns the current message or authenticated 404; PUT applies the sequence transaction above and returns the accepted ID. A lost response requires a new challenge and idempotent retry. Response head information is available only after successful authorization. Challenge consumption and concurrent PUT updates must be serialized.
+### Restrictions learned during loading
 
-After challenge authentication, PUT MUST verify the root message signature, computed ID, schema and encryption envelope shape before any state transition. message.author_id MUST equal the decoded path author, and payload.device_group_id and payload.state_kind MUST equal the decoded path group and kind. Sequence/head checks use exactly that validated tuple. GET MUST return only a message matching that tuple. Authentication of a path alone does not authorize a body referring to a different identity or state stream.
+- When an applicable local exclusion or scoped restriction is learned while media is loading, cancel outstanding requests and queued decoding/playback for the affected display, stop rendering their results, and suppress subsequent loads under that decision.
+- Bytes already sent to or received from an independent host cannot be recalled.
+- A provider-local restriction is not a global judgment about other providers; apply the decision within its verified scope.
 
-This root-only profile requires each writing/reading client to have access to root signing capability (locally or via an explicitly trusted signing device). An X25519 recipient key alone does not grant sync access. Pairing must provide that capability and a trusted head; applications must disclose the root-key exposure of copying a root key to another device. Scoped sync delegation is outside this profile and must not be inferred from public-post delegation. Prefer an external root signer that can revoke a paired device's access. Removing an encryption recipient does NOT revoke root signing authority: a device retaining a copied root key can still read sync, overwrite heads, publish messages and revoke delegates. Clients MUST NOT advertise device removal as account-access revocation in that case. A copied or compromised root cannot be revoked within the same did:key identity; migration to a new identity is required. Recipient removal excludes future decryption only if the removed device also lacks root signing capability and access to newly authorized keys.
+### Isolated media fetching
 
-## Retrieval bounds
+- Every supported media fetch and redirect MUST use equivalent credential-free isolated networking, and MUST apply the destination rules of [safe retrieval](#safe-retrieval-of-untrusted-hints) on every connection and redirect: HTTPS only, no connection to loopback, private, link-local, multicast, unspecified, reserved or other non-global addresses including IPv4-mapped IPv6 equivalents, and the checked address bound to the actual connection so that DNS rebinding cannot redirect it. A syntactically valid URL with a private or loopback address is a valid signed reference and is never fetched.
+- Do not fetch playlists, secondary segments or previews.
+- Send no cookies, HTTP authentication, client certificates, ForYou credentials or Referer.
+- Never fall back to ambient browser networking.
+- If the client cannot enforce these controls for a path or resource, leave embedded rendering disabled and show an inert reference.
+- Opening an external site is a separate explicit user action with a clear external-navigation disclosure; it is not an automatic rendering fallback or permission to contact a blocked local destination.
 
-Candidate chunks, counts and signature_status are advisory. Before author attribution, trusted ranking or actions, fetch and verify the actual signed message, compare candidate fields with it, and discard mismatches. Baseline content addresses are CIDv1, base32 lowercase, raw codec (0x55), SHA2-256 multihash (0x12, 32-byte digest). Hash the exact decoded HTTP entity bytes after transport decompression; UTF-8 text must not be normalized or reserialized. Retrieval responses carry those bytes as canonical unpadded base64url with content_format `application/octet-stream;base64url`. Reject other codec/hash combinations. Metadata's content_address must match the signed message before rendering.
+### Decoding and budgets
 
-Apply the safe-retrieval destination checks below at every hop. Defaults: at most 3 redirects, 10 seconds connection and 30 seconds total per attempt, 1 MiB JSON and 32 MiB content after decompression; larger individual content objects require a future versioned extension. Never execute retrieved HTML, scripts or model instructions. Render user content as data with an appropriate sandbox and no ambient credentials. Verify CID version, codec, multihash and referenced bytes; a regex is not CID validation.
-
-### Retrieval response size exception
-
-`GET /v1/content/{percent-encoded content_address}` returns ContentRetrievalSuccess with canonical unpadded base64url content. For this endpoint only allow at most 45 MiB decoded HTTP JSON entity, overriding the generic 1 MiB JSON retrieval bound, with at most 32 MiB decoded content and 64 KiB of non-content envelope. Check both limits during decompression/decoding, before unbounded allocation; invalid base64 or CID mismatch fails the fetch. The 32 MiB per-object content cap is hard in this profile; larger datasets may use multiple individually committed bounded objects within the purchased aggregate limit. Larger individual objects require a future versioned extension, not disabling limits. Signed message transports remain 1 MiB. The content retrieval schema's encoding is mandatory, not a free-form content_format suggestion.
+- Treat declared kind as an untrusted hint.
+- Permit only inert supported image/video decoding after complete digest verification. The media type is determined from the verified bytes themselves, never from the URL, the declared kind or a response header, and MUST be one the client's inert decoders support and consistent with the declared kind. SVG and any other format that can carry scripts, external references or active content is unsupported. Never embed HTML, scripts or active documents.
+- Playlists, manifests and secondary segments are unsupported.
+- Each redirect requires the same consent, destination and credential rules, with client-enforced request, redirect, transferred-byte, time, decoded-dimension/frame and memory budgets per item and view.
+- Stop on exhaustion, mismatch or inability to enforce limits.
+- These are client safety requirements, not a CDN API or a media hosting obligation.
+- CDN configuration, upload, playback formats, authorization and caching remain app/provider concerns; they cannot increase the author's ForYou fee.
+- ForYou operators MUST NOT automatically fetch thumbnails/previews during admission or indexing.
 
 ## Safe Retrieval of Untrusted Hints
 
-Host hints and redirects are untrusted. Automatic fetchers `MUST` permit only HTTPS, reject embedded credentials, and enforce destination policy on every connection and redirect, including after DNS resolution. By default they `MUST NOT` connect to loopback, private, link-local, multicast, unspecified, reserved, or other non-global addresses, including IPv4-mapped IPv6 equivalents. Implementations `MUST` bind the checked address to the actual connection while validating TLS for the requested hostname, to prevent DNS rebinding. Private-network access requires explicit operator opt-in and a separately configured allowlist; it must not be enabled by a remote hint. Fetchers `MUST` bound redirects, time, and response size, and must not forward credentials to a different origin.
+These rules apply to locally configured peer/bootstrap discovery hints used in [portability](./05-portability.md#independent-provider-entry-and-discovery), not to authorization or provider trust. External-media fetches apply the same destination rules, in addition to their consent and isolation rules above. A hint is not permission to fetch arbitrary private data or trust a peer.
+
+Host hints and redirects are untrusted.
+
+- Automatic fetchers MUST permit only HTTPS, reject embedded credentials, and enforce destination policy on every connection and redirect, including after DNS resolution.
+- By default they MUST NOT connect to loopback, private, link-local, multicast, unspecified, reserved, or other non-global addresses, including IPv4-mapped IPv6 equivalents.
+- Implementations MUST bind the checked address to the actual connection while validating TLS for the requested hostname, to prevent DNS rebinding.
+- Private-network access requires explicit operator opt-in and a separately configured allowlist; it MUST NOT be enabled by a remote hint.
+- Fetchers MUST bound redirects, time, and response size, and MUST NOT forward credentials to a different origin.
 
 ## Hint Freshness
 
 Clients and providers SHOULD treat host hints older than 7 days as stale by default.
 
-Stale hints may still be retried opportunistically, but they should not be treated as high-confidence discovery guidance.
+Measure hint age from a locally recorded observation time or an independently authenticated source; an unauthenticated remote timestamp does not establish freshness.
+
+Stale hints may still be retried opportunistically, but they SHOULD NOT be treated as high-confidence discovery guidance.
 
 ## References and release gate
 
 Algorithms: [JCS](https://www.rfc-editor.org/rfc/rfc8785), [Ed25519](https://www.rfc-editor.org/rfc/rfc8032), [HKDF](https://www.rfc-editor.org/rfc/rfc5869), [XChaCha20-Poly1305 combined mode](https://doc.libsodium.org/secret-key_cryptography/aead/chacha20-poly1305/xchacha20-poly1305_construction). The domain labels, API contracts and trust choices above are ForYou protocol decisions.
 
-Tests establish only the exercised properties. Production launch still requires implementations of durable ledger concurrency, revocation, authenticated sync and destination filtering, with integration and independent security testing. Resolving specification gaps does not establish absence of exploits.
+Tests establish only the exercised properties. A deployment still requires implementations of durable ledger concurrency, revocation, public download and destination filtering, with integration and independent security testing.

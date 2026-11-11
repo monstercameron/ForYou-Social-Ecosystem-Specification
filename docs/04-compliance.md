@@ -1,74 +1,177 @@
-# Regional compliance and user rights
+# Compliance: restriction semantics and operator disclosure
 
-## Boundary and accountability
+## Scope and boundary
 
-Normative operations-1.0 service requirements; legal summaries below are an issue checklist, not a jurisdiction-wide legal opinion. Checked against linked official guidance on 2026-11-11. Each operator remains responsible for its actual role, establishment, markets, users, processing and fund flows. Applicable law may extend beyond server location. No universal legality label, guaranteed erasure across strangers, or claim of automatic exemption from decentralization is permitted.
+This document is normative. It defines only what an interoperable implementation needs:
 
-Keep three independent concepts: cryptographic validity, operator availability/legal restrictions, and reader filtering/ranking. A local restriction MUST NOT rewrite an author's signature or globally invalidate an otherwise valid message. No protocol-required global blacklist or real-name registry. Operators need not serve content they cannot lawfully handle. Interoperability does not require violating law, and cryptographic validity does not create a right to hosting.
+- how a provider restricts or removes a record locally, and what the public sees;
+- what an operator discloses;
+- how data-rights requests relate to the absence of an author-delete message;
+- disclosure during owner export;
+- custody disclosure;
+- the free rights and claims channel.
 
-## Per-market assessment before operation
+Operating procedures (intake forms, case management, per-market checklists, incident handling, funding disputes) are in the nonnormative [operator compliance guide](./11-operator-compliance-guide.md).
 
-Maintain a role-by-market assessment for ingress, storage, indexing, client/remote ranking, private sync and payments. For each record: operator/entity, features and audiences, establishments and targeted markets, service classification, applicable laws and sources, controller/processor analysis, required contacts/representatives, reporting/notice/appeal obligations, age/child-safety measures, lawful processing bases, transfer mechanisms, retention/preservation duties, payment/tax/consumer obligations, counsel reviewer, review date and next review. Record unknowns explicitly. Review at least every 90 days and after a material law, feature, audience or business change. Dates are project review targets; applicable statutory deadlines take precedence.
+Three concepts are independent and MUST be kept separate:
 
-Unresolved material duties block offering the affected feature in that market. Restrict features or service exposure where lawful and effective; do not assume geoblocking conclusively removes jurisdiction. Seek clarification on conflicting obligations, document the decision, and cease the affected activity if no lawful design exists. Never export a domestic restriction to unrelated users merely for implementation convenience. No regulator or project maintainer can be represented as certifying compliance without actual authorization.
+| Concept | Decided by | Effect |
+| --- | --- | --- |
+| Cryptographic validity | The signed bytes and [the protocol](./02-protocol.md) | Identical for every verifier |
+| Availability and restriction | Each operator, for its own service | Local to that operator |
+| Filtering and ranking | Each reader or application | Local to that reader |
 
-| Market checklist | Assessment and implementation required |
-| --- | --- |
-| EU/EEA | Classify intermediary/hosting/platform roles and size-dependent duties; implement applicable DSA notice/action, reasons, complaint and transparency requirements. Determine GDPR lawful bases, controller relationships, data-subject rights, security, impact assessments where required and international transfers. |
-| UK | Assess links with the UK and regulated service scope; complete required illegal-content and children's access/risk assessments and safety processes. Map applicable privacy and age-assurance duties independently. |
-| United States | Assess relevant federal and state obligations. For applicable copyright safe harbors, implement eligibility conditions, designated-agent and notice/counter-notice handling. Separately assess child safety/reporting, privacy, consumer protection, sanctions and payment licensing obligations. |
-| Australia | Assess whether the actual service is an age-restricted social media platform, applicable account-age measures and other online-safety obligations. Do not assume a decentralized service is excluded. |
-| Other markets | No inferred approval: complete the same assessment before targeting them, including data localization, prohibited content, age, payment and consumer requirements. |
+- A restriction MUST NOT alter a signed record, its signature or its `message_id`, and does not make a valid message invalid.
+- Cryptographic validity creates no right to hosting. An operator is not required to serve content it cannot lawfully handle, and no requirement in this specification requires violating applicable law.
+- The protocol defines no global blacklist, real-name registry or content authority. The ForYou Foundation has no authority over content at any provider other than the Lifetime Vault it operates.
+- Each operator remains responsible for the law that applies to its actual role, markets and fund flows. An implementation MUST NOT present conformance to this specification as legal compliance or certification.
 
-## Operator manifest and privacy
-
-Commercial disclosure requirements below do not exempt nonprofit, volunteer or individual services from laws applicable to their actual activities. Legally required disclosures apply regardless of this project's commercial-service threshold.
-
-Public commercial endpoints MUST publish `/.well-known/foryou-operator.json`, signed using P("operator-manifest", the object excluding signature). Required fields: operator_id, manifest_version (positive monotonic integer), issued_at, expires_at (no more than 30 days later), service_roles, service_endpoints, supported_profiles, policy_url, policy_digest, legal_contact, abuse_contact, privacy_contact, appeal_url and markets_assessed. Contacts may be role addresses; do not require publishing an individual home address or confidential legal advice. Clients verify the signature and display local trust selection, policies and freshness; a manifest is a disclosure, not a compliance certificate. No mandatory global registration. Bootstrap accepts locally configured operator keys and independently obtained manifests.
-
-Do not put user locations, identity documents, notices, private reports, wallet/account mappings or age evidence in public manifests or social messages. Age measures must satisfy applicable law while minimizing collection: prefer a narrowly scoped age result from a suitable independently assessed service when legally sufficient; do not promise that a cryptographic age credential automatically meets local requirements. Assess linkability, retention and vendor failures. Client-local preferences stay local unless the user opts into encrypted sync; remote ranking requires explicit disclosure and a separate data-flow assessment.
-
-## Notices, decisions and appeals
-
-Remote ranking and reading telemetry require a separate affirmative, revocable opt-in identifying the service, purposes and exact categories sent; disclosure alone is insufficient. Minimize shared context and do not condition ordinary local reading on disclosure of private follows, blocks, bookmarks or history. Revocation stops subsequent transmission and selects local/follow-only fallback; retention/deletion of already shared data follows applicable rights. Apply local mute/block/safety choices after remote results, so the ranker cannot reinsert content the reader excluded. A ranking response is untrusted data, never instructions or permission to change privacy settings.
-
-Clients persist the highest verified manifest_version and canonical signed-body digest per operator. Reject rollback even while an older signature remains unexpired; the same version with a different body is equivocation and requires explicit operator-key/policy review, not last-response-wins. First contact verifies the pinned key, current expiry and user-approved endpoint. An intentional trust reset must be explicit and warn that freshness cannot be proved from a signature alone. Independently compare updated manifests where available without automatically trusting peers' assertions.
-
-Provide accessible `POST /v1/notices` and a web route, without requiring paid membership or a blockchain transaction. Accept locator, claimed legal/policy basis, explanation, relevant evidence reference and contact where required; anonymous safety reports can initiate review, while legally prescribed notices retain their prescribed requirements. Do not encourage uploads or public replication of prohibited evidence. Rate-limit abusively automated reports without blocking genuine emergency or statutory requests. Screen authority and scope of orders; preserve authenticated evidence privately with restricted access.
-
-An internal case has a random unguessable ID and states received, triaged, investigating, decided, appealed, reviewed, closed. A decision records operator, affected locators, basis_kind (law, terms, or security), specific basis, action (none, restrict, remove, deindex, preserve, restore), scope, decided_at, review_at where temporary, reasons, appeal route and applicable deadlines. Notify affected parties where lawful; explain withheld notice under the applicable exception. Access to cases requires verified ownership/party authorization, not knowledge of a message ID. Externally published aggregates must not reveal reporters, victims or prohibited content. A signed decision proves who issued it, not that it is correct or binding on another operator.
-
-Provide a free appeal, correction/restoration and an audit trail. Qualified human supervision/review is mandatory wherever applicable law requires it, including applicable DSA complaint safeguards; feasibility may qualify only additional voluntary independent review. Deadlines, evidence and notice forms follow the applicable regional process, not one invented universal timer. Court preservation, copyright counter-notices and emergency reporting require distinct workflows. Document reasons if lawful preservation prevents deletion; isolate the retained material and prohibit unrelated processing.
-
-Evidence references MUST NOT trigger unrestricted fetching or execution by a server or agent. Apply [the protocol specification's](./02-protocol.md) destination, redirect and resource controls, inert rendering and no ambient credentials. Treat embedded instructions as untrusted data. Prohibited-material evidence goes only through an authorized, restricted intake/preservation process; never automatically mirror it into normal logs or model context.
-
-## Incidents and personal-data breaches
-
-Designate an accountable incident lead and escalation contacts, including suppliers. Maintain procedures for detection, containment, access revocation, minimally necessary evidence preservation, incident scope/risk assessment, processor-to-controller notification, and regulator/affected-person notices under the actual applicable thresholds and deadlines. Maintain a role/market notification register and timed drills; do not substitute a universal protocol deadline for law. Coordinate recovery, backup suppression and vendor remediation; document reasons for notification/non-notification, restricted investigation records, and an appropriately redacted postmortem. Protect reporters and prevent incident evidence from becoming a second disclosure.
-
-Official references: [Commission breach obligations](https://commission.europa.eu/law/law-topic/data-protection/information-business-and-organisations/obligations_en) and [DSA Article 20](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A32022R2065). An immutable purchase contract does not prevent necessary prospective privacy/legal changes; provide dated notice and preserve accrued lawful rights without continuing unlawful processing.
+In this document an **account** is the provider-local record keyed by `author_id` that holds that author's per-network prepaid balances and admission history at one provider. An account is not a protocol identity, exists at one provider only and is never transferable.
 
 ## Shared signals and legal restrictions
 
-Deny/hash-list signals carry issuer, scope, provenance, version and correction/revocation route; they are evidence to assess, not automatic global law. Restricted lists and evidence MUST NOT be publicly exposed. Evaluate false positives, list poisoning, adversarial reporting and disproportionate geographic scope. No automatic user-wide ban from an unverified signal. Mandatory actions are implemented by the accountable operator under its applicable duties.
+A provider MAY restrict or remove a retained record under its disclosed policy or applicable law. The action is local to that provider.
 
-Clients distinguish timeout, not_found, expired, quota_exhausted, policy_restricted and legal_restricted. Ordinary availability failover remains supported. An operator subject to an applicable restriction MUST NOT use proxying or fallback to serve what it is prohibited from serving. Independent providers make their own applicability decisions; one operator's refusal does not instruct every other operator to suppress the object. Do not implement a default 'find an unregulated host' bypass for a legal restriction. Do not silently relay sensitive report details during fallback.
+For the public read routes in [portability](./05-portability.md#public-download-and-provider-exit), a provider MUST answer for a restricted, removed or expired record exactly as follows:
+
+| Situation | HTTP status | JSON body |
+| --- | --- | --- |
+| Policy refusal, reason may be disclosed | 403 | `{status:"policy_restricted"}` |
+| Legal refusal, reason may be disclosed | 403 | `{status:"legal_restricted"}` |
+| Existence may be disclosed, reason may not | 403 | `{status:"restricted"}` |
+| Existence may not be disclosed | 404 | `{status:"not_found"}` |
+| Retention period ended and the record was dropped, direct GET only | 410 | `{status:"retention_expired"}` |
+| Rate or work limit | 429 | per the owning route |
+| Service or capacity unavailable | 503 | per the owning route |
+
+- A restriction body contains only the `status` field. It MUST NOT contain case identifiers, reporter details, evidence, counts of hidden records or free text. An error body is at most 1024 UTF-8 bytes.
+- The nonrevealing 404 MUST use the same body and disclosure behaviour as the 404 returned for an unknown object.
+- A provider MUST NOT return 410 for a record whose existence it may not disclose; the restriction response takes precedence over `retention_expired`.
+- A provider MUST NOT disguise a rate or capacity failure as a restriction, or a restriction as a rate or capacity failure.
+- Listings omit restricted records without a marker and MUST NOT disclose how many records were withheld.
+- A restriction takes effect on the provider's own responses when it is committed. Copies cached under the direct-GET cache bound in [portability](./05-portability.md#public-download-and-provider-exit) MAY persist until that bound elapses; bytes already delivered cannot be recalled.
+- A provider subject to a restriction MUST NOT serve the restricted record through a proxy, cache, replica or fallback it controls.
+- The Lifetime Vault applies the same statuses. Its restrictions are local to the vault.
+
+Client and relay interpretation:
+
+- Clients MUST distinguish timeout, `not_found`, `retention_expired`, rate or capacity exhaustion, `policy_restricted`, `legal_restricted` and `restricted`. For `restricted`, a client MUST NOT infer or state a legal basis.
+- A 404, 403 or 410 describes one provider. It is not proof of global absence, deletion or illegality, and it is not an instruction to any other provider or client.
+- A client MAY query other providers the user selected. A client MUST NOT forward confidential case details when it does so.
+- Each provider decides independently whether a restriction applies to it. One provider's refusal does not require another provider to suppress the record.
+
+Shared deny-list or hash-list signals are evidence for an operator to assess. They MUST carry issuer, scope, provenance, version and a correction route. An operator MUST NOT publish restricted lists or evidence and MUST NOT apply an author-wide block solely on an unverified signal.
+
+A record stores text and external links, never media bytes. Restricting a record restricts the locally stored link; it does not remove the remote file.
+
+### Recovery of acknowledged controls
+
+A control is a committed restriction, legally required removal or delegation revocation.
+
+- Before acknowledging a control as effective, the operator MUST durably commit its scope and ordering. If durability cannot be established, the operator MUST report failure and MUST NOT acknowledge success.
+- Control state MUST be recoverable independently of ordinary content backups.
+- After a restore, failover or suspected rollback, the operator MUST keep affected public delivery, owner disclosure and delegated issuance closed until current control state is verified. Uncertainty fails closed with 503.
+- Restored data MUST NOT restore a removed record, lift a restriction or revive a revoked delegation. Only a separately authorized, durably recorded action lifts a reversible restriction.
+- Recovery state MUST NOT be published as a list of restricted identifiers and is not a shared registry.
+
+The guide describes one [checkpoint design](./11-operator-compliance-guide.md#recovery-checkpoint-procedure) that satisfies these rules.
+
+## Operator manifest and privacy
+
+Every operator that offers admission, public download or the Lifetime Vault MUST publish `/.well-known/foryou-operator.json`, an `OperatorManifest` signed over P("operator-manifest", the object excluding `signature`). The requirement does not depend on whether the service is commercial.
+
+| Field | Requirement |
+| --- | --- |
+| `operator_id` | The operator's `did:key` |
+| `manifest_version` | Positive integer, strictly increasing per operator |
+| `issued_at`, `expires_at` | `expires_at` at most 30 days after `issued_at` |
+| `service_roles` | Roles the operator performs |
+| `service_endpoints` | HTTPS endpoints covered by the manifest |
+| `supported_profiles` | Wire versions supported |
+| `policy_url`, `policy_digest` | The operator's policy and its digest |
+| `legal_contact`, `abuse_contact`, `privacy_contact` | Contacts; role addresses are sufficient |
+| `appeal_url` | Entry point of the free rights and claims channel |
+| `markets_assessed` | Markets the operator states it has assessed |
+
+- A manifest is a disclosure signed by the operator. It is not a compliance certificate, and no global registration exists.
+- A manifest and any public message MUST NOT contain user locations, identity documents, notices, private reports, account-to-wallet mappings or age evidence.
+- Clients MUST verify the signature against a locally trusted or user-approved operator key, and MUST persist the highest verified `manifest_version` and its signed-body digest per operator.
+- Clients MUST reject a lower `manifest_version` even if its signature is unexpired. The same version with a different body is equivocation: the client MUST stop treating the manifest as current until the user reviews the operator key and policy.
+- A trust reset MUST be an explicit user action.
+
+The provider's retention period is published separately in its signed `RetentionDeclaration`; see [economics](./03-economics.md#retention-and-the-lifetime-vault).
+
+## Custody and balance disclosure
+
+An author prepays BTC or ETH into the account balance at one provider. The provider debits each admitted record's protocol fee from that balance as a collection agent. It owes the full debited amount to the Foundation under [settlement](./03-economics.md#settlement). The fee amount comes only from the release-approved [fee schedule](./03-economics.md#denominations-and-versioned-fee-schedule).
+
+Before accepting a deposit, a provider MUST disclose all of the following:
+
+| Disclosure | Content |
+| --- | --- |
+| Custody | The provider holds the balance; neither the protocol nor the Foundation guarantees the provider's solvency |
+| Scope | The balance is specific to one `author_id`, one provider and one network, is not transferable between providers or authors, and is not a protocol token |
+| Fee | Each admitted record is charged the schedule amount; the provider does not keep it and cannot change it |
+| Crediting | A deposit is credited only after the confirmation or finality condition in [the protocol](./02-protocol.md) |
+| Costs outside the fee | Network transaction costs of deposits and withdrawals, stated separately from the protocol fee |
+| Loss | Provider insolvency, custody failure or legal restriction can impair recovery of an unspent balance |
+| Remedy | The free rights and claims channel and the remedies in [economics](./03-economics.md) |
+| Linkability | Public-chain deposits can be correlated with the provider and, through provider records, with the author DID |
+
+- A provider MUST NOT describe the protocol fee, the schedule or any asset conversion as terms it sets, and MUST NOT charge a different protocol fee than the schedule amount.
+- A provider MUST NOT present an unconfirmed or orphaned deposit as spendable.
+- A provider MUST keep each account's deposit, debit and withdrawal history available to the authenticated author for as long as the account has a balance or an open claim.
+- A provider MUST NOT treat an unmatched, excess or late transfer as forfeited without the claims process below.
+- Control of an author root key proves control of the protocol identity. It does not prove ownership of funds sent by someone else; a third-party payer uses the claims channel.
+- A provider MUST NOT place DIDs, account identifiers or dispute details in on-chain transaction data.
+
+Whether an operator's activity is custody, a payment service or another regulated activity is decided by applicable law, not by these labels.
 
 ## Personal-data lifecycle
 
-An unaffiliated client may offer neutral user-selected alternate sources consistent with its own applicable duties. Another host's legal_restricted response is not a global stop instruction. A restricted host must not delegate prohibited delivery through a proxy; this does not make it the legal authority for independent clients. Unavailable alternatives are not proof of illegality. Fallback must not forward confidential case details.
+The protocol has no author-delete or withdrawal message. An edit is a new record with `payload.supersedes`; it does not erase the earlier version. At the provider, each accepted record is retained until its `retain_until` under the provider's declaration. In the Lifetime Vault it is retained without scheduled expiry. Both are defined in [economics](./03-economics.md#retention-and-the-lifetime-vault). Anyone may keep an independent copy.
 
-Inventory public posts, social graph, identifiers, content hashes, indexes, embeddings, logs, backups, funding records and private sync data; neither a hash nor encryption automatically makes data anonymous. Define purpose, lawful basis where required, responsible parties, access controls, recipients, transfer safeguards, retention duration and deletion/preservation procedure for each category. Public visibility is not unlimited consent for scraping, profiling or model training. Legal assessment must cover independent replication and remote AI processing.
+These protocol facts do not waive erasure, correction, access or other legal rights. Such rights are exercised as follows:
 
-Offer authenticated access/export/correction/erasure/restriction requests separately from author withdrawal. Possession of a social root key can establish account control, but people described in someone else's post need an alternative identity-verification path proportionate to the request. Requests must not require unnecessary identity documents. Honor required response deadlines and extensions with reasons. Remove eligible data from primary stores, indexes, caches, embeddings and derived profiles, and propagate legally required notifications to known processors/recipients. Track acknowledgments and failures; do not guarantee deletion by unknown independent hosts. Backups need a documented expiry and restore-time suppression so deleted records are not silently resurrected. Lawful holds are narrowly scoped, access-controlled and periodically reviewed. The tombstone itself may contain personal data; retention must be justified.
+- A data-rights request is made to each operator separately through its free rights and claims channel. It is never a protocol message and never requires a fee, a balance or a root key.
+- The Foundation is the operator of the Lifetime Vault and handles requests concerning the vault's copy through its own channel.
+- An operator that grants a request acts on its own copy by restriction or removal and then answers with the statuses in [shared signals and legal restrictions](#shared-signals-and-legal-restrictions). A legally required removal overrides the retention duty for that record at that operator.
+- A person who is not the author MUST be able to make a request without holding any protocol key.
+- An operator MUST NOT state or imply that its action deletes the record from other providers, the vault or independent copies.
+- A removed record MUST NOT be restored by backup recovery, replica repair or re-delivery from another operator the removing operator controls.
+- No operator is required to notify, and no protocol message exists to notify, other providers of a removal.
 
-## Verified sources and scope limits
+## Current disclosure during owner export
 
-- [European Commission DSA Q&A](https://digital-strategy.ec.europa.eu/en/faqs/digital-services-act-questions-and-answers): obligations depend on the intermediary/platform role, with additional duties for larger services; this is not one universal platform checklist.
-- [European Commission data-subject rights](https://commission.europa.eu/law/law-topic/data-protection/information-individuals_en): rights and exceptions, including erasure, portability and informing other controllers in applicable circumstances.
-- [Ofcom compliance guide](https://www.ofcom.org.uk/online-safety/illegal-and-harmful-content/guide-for-services): scope and ongoing risk/safety assessment, including services outside the UK.
-- [U.S. Copyright Office section 512](https://www.copyright.gov/512/): conditional safe harbors and notice/counter-notice processes, not blanket immunity.
-- [Australian eSafety FAQ](https://www.esafety.gov.au/about-us/industry-regulation/social-media-age-restrictions/faqs): applicability of social-media age restrictions requires service-specific assessment.
-- [FinCEN CVC guidance](https://www.fincen.gov/resources/statutes-regulations/guidance/application-fincens-regulations-certain-business-models): evaluate actual money-service activities; labels and decentralization do not determine classification.
+Owner export is the optional [owner export profile](./10-owner-export-profile.md). An operator that offers it MUST apply these rules.
 
-These sources are not exhaustive and do not substitute for local legal review. Governance maintains an issue tracker for changed law; operators retain responsibility for updates and implementation.
+- An export job or signed manifest is not a continuing disclosure grant. The operator MUST recheck the authenticated recipient, job and file ownership, and current permission to disclose each included record on manifest delivery, file delivery, retries, resumed chunks and incremental transfers.
+- Temporary public unavailability alone does not revoke the owner's export entitlement for records still retained. Account suspension does not remove the export entitlement either.
+- A preservation hold requires preservation, not automatic disclosure or automatic denial. The requested disclosure is evaluated separately.
+- Owner authentication does not override a disclosure prohibition and does not authorize disclosure of case evidence.
+- The operator MUST serialize the release of each bounded response chunk against committed controls. When a control prevents further disclosure, the operator MUST stop releasing bytes and invalidate affected staged artifacts and resumptions. It does so at every cache, replica and file-delivery service it controls, before acknowledging the control as effective.
+- The operator MUST NOT serve a prepared export after the underlying record was removed or restricted from disclosure. Where permitted it MAY prepare a replacement export with new integrity commitments and an accurate incomplete indication. It MUST NOT alter a signed manifest or file in place, silently omit promised records, or describe the original export as complete.
+- The operator MUST NOT disclose withheld identifiers or counts when that disclosure is itself prohibited.
+- An incremental manifest MUST NOT direct reuse of a locally cached entry whose disclosure is now prohibited.
+- Bytes already released cannot be recalled, and the operator MUST NOT claim to erase a recipient's existing copy.
+- After a restriction is lifted, disclosure requires a fresh decision and a new artifact; an invalidated job or token is never revived.
+
+## Rights and claims channel
+
+Every operator MUST offer a free channel for notices, data-rights requests, appeals and funding claims.
+
+| Rule | Requirement |
+| --- | --- |
+| Cost | No fee, paid membership, balance or blockchain transaction to submit |
+| Identity | No root key or account required merely to submit; third-party payers and people described in another author's record MUST be able to use it |
+| Entry point | Published as `appeal_url` in the operator manifest, with at least one alternative that does not depend on the HTTP routes below |
+| Reserved routes | `POST /v1/notices`, `POST /v1/rights-requests`, `POST /v1/appeals`, `GET /v1/intake/{request_id}`, `GET /v1/intake-forms/{form_id}/{form_version}` |
+| Request bound | An intake request is at most 256 KiB of UTF-8 JCS; larger requests are rejected |
+| Caching | Every intake response carries `Cache-Control: no-store` |
+| Nondisclosure | An unknown and a nondisclosable submission receive the same 404 |
+| Saturation | 429 with retry information or 503; an operator MUST NOT acknowledge a submission it has not durably stored |
+
+- The reserved routes are OPTIONAL. An operator that implements them MUST use the `IntakeRequest`, `IntakeReceipt`, `IntakeRecovery` and `IntakeForm` definitions in the [operations schema](../schemas/operations.schema.json), and MUST follow the optional [bounded intake and recovery profile](./11-operator-compliance-guide.md#bounded-intake-and-recovery).
+- A receipt proves that the operator received a submission. It does not prove the truth of a claim, the standing of the submitter or any entitlement.
+- Before disclosing case information or acting on a claim, the operator MUST verify the claimant's authority separately. A message ID, case ID, email address or payment alone is not authority.
+- A public restriction status does not replace the private reasons, notice and appeal owed to an affected party under applicable law.
