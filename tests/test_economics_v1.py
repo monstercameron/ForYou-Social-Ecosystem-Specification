@@ -10,6 +10,7 @@ import unittest
 import jsonschema
 
 import economics_model as em
+from bitcoin_address_reference import bitcoin_script
 from test_operations_profile import structural
 from test_security_profile import PROVIDER, SCHEMA, did
 
@@ -35,6 +36,7 @@ class FeeScheduleTests(unittest.TestCase):
 
     def test_published_example_is_reproducible(self):
         self.assertEqual(json.loads(em.EXAMPLE.read_text(encoding='utf-8')), X)
+        bitcoin_script(em.RECIPIENTS['bitcoin-mainnet'])  # raises ValueError on a bad Bech32/Base58 checksum
 
     def test_schedule_1_amounts(self):
         self.assertEqual((BTC['base_fee_base_units'], BTC['per_kib_fee_base_units']), ('0', '136'))

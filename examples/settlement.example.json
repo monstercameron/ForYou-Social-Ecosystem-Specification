@@ -14,29 +14,29 @@
       {
         "foundation_id": "did:key:z6MktFovzcapNZyZBWzFJpCXf26B8XLKdXtwfwnXXFebPgzM",
         "recipients": {
-          "bitcoin-mainnet": "bc1qw508d4ejxtdg4y5r3zarvary0c5xw7kv8f3t4",
+          "bitcoin-mainnet": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4",
           "ethereum-mainnet": "0x5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a"
         },
         "issued_at": "2026-09-01T00:00:00Z",
         "valid_from": "2026-10-01T00:00:00Z",
         "valid_until": "2027-10-01T00:00:00Z",
-        "certificate_id": "fyfc2:82f99cebed2e46ada60c10cc2cf5f0de912e78a788be5772299de5b62d40d8f6",
+        "certificate_id": "fyfc2:7d1a8b9e734a6f97d64d75a316adfaa13b5585bfb9d433382f7164111d5bbd54",
         "release_signatures": [
           {
             "release_key_id": "did:key:z6Mkf3cuJVj9Frb5QcR2P7qx8tB86LfzbVS1NaGKuYc7ppjM",
-            "signature": "jg9HjBh8tRBY8xVjW96u3tMG9jNTpyws_Aw3cIOEWeFsVSQSbHHv-UN2U4IqaIph8-9jlkSEXQirqX7bTblQBA"
+            "signature": "qQkO3mqgCwcKNIKtlkEscmSr_oBarQMjr_ti-Ivn3vSmP4BIoArPIW7bVNkVqbAb8Xy5oFcJDE2y_TILJ3pLBA"
           },
           {
             "release_key_id": "did:key:z6MkfUA6q63QayZpLUtQTtotdTSD3VsTk6JNpMpCeJ7CJpb6",
-            "signature": "R0o4T5URTzjcCBuBc591KRE1nxkFzwg27o5Ho1zJyGY0e_SETXZ5VdpRr5vR3OLpy6ZTxzaJeUQnwDSVH2KnDQ"
+            "signature": "PhBrnmtD-NNwIHwXSURHqtuql7ges9WfFzOLrNxR-YQJ-qNkX_F72lT46LPi0cNskYgGhUYkkasLwJh_FM89Cg"
           },
           {
             "release_key_id": "did:key:z6MkhkzxiZyrERq5s5RXGZRwboQ3eJhK9rgA7nvTTHP18VxC",
-            "signature": "Ba1v6XJHbFCd_-g_GmT8SwC1903B2kUvmwUNbaLqogbx0Z1wgsLz8MKvGrhCyXLV8-pfe_9hpss-uFUESQwtBg"
+            "signature": "jYk1clYFrZn0hAmm-0lH1jFV1Doh5WiMCMGTYu4CgCqhHWHqpzVHl3nAC0pOQ5e_zrWrOvEvG3kY5WDhbu8NBQ"
           },
           {
             "release_key_id": "did:key:z6Mkq9YUgmGe3uY4RBebSnCENnMkQvBLG1bYAdW3cyWn74YX",
-            "signature": "1u8r4-iGMdMmmntv5VQlFsijWOwUEk8xUNAcNw0kaTg7Bfsx2v5Q1esU9USWEdUO9XbS0w0GPizS8Ogc4_p5CQ"
+            "signature": "KCPGGAnBOzOGjd7FiqPtoASUE4fkVsW_rJbAa9tbJ1XVyPmoeH8FppCIoOgu1YcD3cmxTEYS2r7u1FGZeA1ZCw"
           }
         ]
       }
@@ -154,19 +154,19 @@
     "release_signatures": [
       {
         "release_key_id": "did:key:z6Mkf3cuJVj9Frb5QcR2P7qx8tB86LfzbVS1NaGKuYc7ppjM",
-        "signature": "vUhUaG6YxkCD1V3JJIm3UGPwFOqTA4ETifhtO05-iLfXfg7j5a5bd2TnmKltEvIbQDoPGFVn12AWgz8k7JH_Bg"
+        "signature": "WY35B3jN44O6GSfQu70jKYvC69W65jo6zuzkofBFD1wEE2hSKcwglpSINSukgb0tfCH5KpOcIPikwE8wKEJqCg"
       },
       {
         "release_key_id": "did:key:z6MkfUA6q63QayZpLUtQTtotdTSD3VsTk6JNpMpCeJ7CJpb6",
-        "signature": "ODp6VmcbNDWr55E9TQk5mJQxV49ffqAgP4t18DouQCPLWGPMrk2p-bAZ08pV5SqzEUPAPcvA57IJAI9rRwR8Cw"
+        "signature": "tglCqIebCu9RDwljcUm6SZzrauXt5UWlzRW9bSUDb_YSktSvJx6cyr5mvakcR9gu-tBIERqfvGTnOEyvKcB_Bw"
       },
       {
         "release_key_id": "did:key:z6MkhkzxiZyrERq5s5RXGZRwboQ3eJhK9rgA7nvTTHP18VxC",
-        "signature": "rsSEpz8_X1FMD80RsTBW5feShG1Qxvoq21vyR1GcV9l1BifI2Nn1hqtaickMD9QvPeAQV37jGSeebUueBnmdCQ"
+        "signature": "YIOXPhjJhyACn5B4XhHkZBfLOFXBN1OBg0rH_vpHK97G_VlGBCnr3hjMkoNhUcFKJ1ZApaFT6rUl-xnnbMRoDA"
       },
       {
         "release_key_id": "did:key:z6Mkq9YUgmGe3uY4RBebSnCENnMkQvBLG1bYAdW3cyWn74YX",
-        "signature": "M6Nlbg4gZp0k0dao049FaLEQPQSnGX9nVkCJ2f0kG3MhroRDLQfvJi8vd9OYAGxFt0a5UFJRwXA5OsKe_oOdAw"
+        "signature": "ufQ-YodT2VFKlM_o3FK9JHyN__ZKKwD9J91jvRu_vToqMzfH2P1wdrCYVWhEu4qIOTLNd7X-OHo1a5uhY4elDA"
       }
     ]
   },
@@ -176,21 +176,21 @@
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "retention_seconds": 315360000,
       "payout_recipients": {
-        "bitcoin-mainnet": "bc1qw508d4ejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+        "bitcoin-mainnet": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
       },
       "effective_at": "2026-12-01T00:00:00Z",
-      "declaration_id": "fyrd2:b3726eaff6ef7f6df69312da2fa34e38b38e8750f92f20411a51098e119cab45",
-      "provider_signature": "4H89SLt7iMCezuX6gczW0v2pLOFoT-EyDi0JzclDcUlPX4Lcz7Sk0J99hwA3ny24VW0awpUF6ioFbb9QDVXqCw"
+      "declaration_id": "fyrd2:16cadc2610d20c84575d03a409c29beee0acf70fb6e963800814340d3acb17d1",
+      "provider_signature": "cXISY1ScrLHaEccQpXRkETP60e9MW7_8rxKDxmL5PuIENnbZ4Ax1YkG5Y0TPn9SJJOqp0dJHZR5_N1aVRArpAA"
     },
     {
       "provider_id": "did:key:z6Mkjppjwd12cSzdhduNMf3reWgxgkUn7WFM3pnA5f3gFcLj",
       "retention_seconds": 31536000,
       "payout_recipients": {
-        "bitcoin-mainnet": "bc1qw508d4ejxtdg4y5r3zarvary0c5xw7kv8f3t4"
+        "bitcoin-mainnet": "bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4"
       },
       "effective_at": "2026-12-01T00:00:00Z",
-      "declaration_id": "fyrd2:1811b63799829bdfcd821d760619a4054dda5d63d0dae2aad2613e1e23b12fc0",
-      "provider_signature": "iyUkb4nHuCLnrZi2f7K2zlSbrPcBtnmRvs1sQKADz69X55d8eVTRyu6eeqJb3oLobuTlwoseQDatnoI27cqVDg"
+      "declaration_id": "fyrd2:a590de1916dcc224cb120b8713b961131d2414a7d2387432bd420242cacb989a",
+      "provider_signature": "NJvjPl4pjAwomJKV0uMH6m4-U8wBHyowGdy7alBYTlesan3kfzLlsWfzfJ0fBUCBLk6hTfmW5q71kFHecq5yBA"
     }
   ],
   "receipt": {
@@ -213,14 +213,14 @@
     "previous_claim_id": null,
     "period_start": "2027-01-05T00:00:00Z",
     "period_end": "2027-01-06T00:00:00Z",
-    "declaration_id": "fyrd2:b3726eaff6ef7f6df69312da2fa34e38b38e8750f92f20411a51098e119cab45",
+    "declaration_id": "fyrd2:16cadc2610d20c84575d03a409c29beee0acf70fb6e963800814340d3acb17d1",
     "succession_id": null,
     "receipt_count": 5,
     "total_base_units": "10472",
     "cumulative_base_units": "10472",
     "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
-    "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
-    "provider_signature": "KNKtHQkYUuJhFcg8ophltedl38Lb-MFtlmpJAzS0X3RQMQQuzaOnx_ewnpUf3iiEYtiQwmFoLK6EMax1SqRiBw"
+    "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
+    "provider_signature": "OcPmII9r9BQaZzkzV0UeFnOxGH9EK0Gg4AivCdMrXCgJ4nrCGi0qBNOTUb5f3G1-90t78KHSy7h1y__F4BHFCw"
   },
   "settlement_leaves": [
     {
@@ -262,14 +262,14 @@
       "previous_claim_id": null,
       "period_start": "2027-01-05T00:00:00Z",
       "period_end": "2027-01-06T00:00:00Z",
-      "declaration_id": "fyrd2:b3726eaff6ef7f6df69312da2fa34e38b38e8750f92f20411a51098e119cab45",
+      "declaration_id": "fyrd2:16cadc2610d20c84575d03a409c29beee0acf70fb6e963800814340d3acb17d1",
       "succession_id": null,
       "receipt_count": 5,
       "total_base_units": "10472",
       "cumulative_base_units": "10472",
       "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
-      "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
-      "provider_signature": "KNKtHQkYUuJhFcg8ophltedl38Lb-MFtlmpJAzS0X3RQMQQuzaOnx_ewnpUf3iiEYtiQwmFoLK6EMax1SqRiBw"
+      "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
+      "provider_signature": "OcPmII9r9BQaZzkzV0UeFnOxGH9EK0Gg4AivCdMrXCgJ4nrCGi0qBNOTUb5f3G1-90t78KHSy7h1y__F4BHFCw"
     },
     "leaf": {
       "receipt_hash": "cdb9ce4f1dd695e637a346b15009011bcf7b75c1c786ee19cbb27650024ceff4",
@@ -295,7 +295,7 @@
     "witnesses": [
       {
         "witness_id": "did:key:z6MkrPuMzSSYYddw1BKtyrH5mMJzQmUX42Lr8eiKpsPVb3C1",
-        "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
+        "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
         "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
         "network": "bitcoin-mainnet",
         "sequence": 1,
@@ -305,11 +305,11 @@
         "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
         "credit_base_units": "9989528",
         "witnessed_at": "2027-01-06T12:00:00Z",
-        "witness_signature": "p44XmHlRkBVT4JM-YWIwa5o5n5CedzJ8DqxWSydlfehin_KbQyYH-3f0KMflrWkx_yYefFC3HXGoK87oaa69CQ"
+        "witness_signature": "a46XqRyKAr3IuXZP_Yi3AIf5Q3fxilGqC22i4E_NPGLJEvSIpl2xvBjQDOgI-wdHVS84GOH_gK246Bzg8W_RCw"
       },
       {
         "witness_id": "did:key:z6Mkin4R28N2tfcsvUfuX52peTmvPGz99aA4585EtYvALN5W",
-        "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
+        "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
         "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
         "network": "bitcoin-mainnet",
         "sequence": 1,
@@ -319,11 +319,11 @@
         "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
         "credit_base_units": "9989528",
         "witnessed_at": "2027-01-06T12:00:00Z",
-        "witness_signature": "iqaAcU2Irf7KcIuf1D_fqgZWgG7iujNaStAdsT8zflbBv0canQi_GlxTWwaf-_F2ICZTyN7qQbluDGAOBdvoBg"
+        "witness_signature": "3e8tEHfI-MX_H4Z5C2RGonAFMKItqfp2x7ntsdF5ZC93Pp8R-laiKgkufBlT7cHPo8aonflltG1Y8K2ygVUgDQ"
       },
       {
         "witness_id": "did:key:z6Mkjsv23KiDw67aC9qfNVUcNwM19nj8GZPvEMMEBuv3ZpT3",
-        "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
+        "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
         "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
         "network": "bitcoin-mainnet",
         "sequence": 1,
@@ -333,11 +333,11 @@
         "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
         "credit_base_units": "9989528",
         "witnessed_at": "2027-01-06T12:00:00Z",
-        "witness_signature": "5UR_bE7K0NVcH2CMUIsx0wCv8KFzPyij2nbJrtuCCRA-nGWQeEBhW8_wVIy2yHjeaFAXM7LI00qByh7u-E6qBA"
+        "witness_signature": "DU3wT0y8_jTHiE2lh0YyczA1XfaIHbChkH79t24bycA-GTlkQuI8PRf4F4dk1DvNW4kgDZNsrDuUFUkBko3gDA"
       },
       {
         "witness_id": "did:key:z6MkksB6V1wxz1SWEgct2qdqVSk6a7E24fuifo62BgYFsEc6",
-        "claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
+        "claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
         "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
         "network": "bitcoin-mainnet",
         "sequence": 1,
@@ -347,7 +347,7 @@
         "receipts_root": "a3b611487ed295e46340f4132f3281d8c32e0e8dc9546776be535594c2e3cfa9",
         "credit_base_units": "9989528",
         "witnessed_at": "2027-01-06T12:00:00Z",
-        "witness_signature": "7FqLcIuFjtvYtLueQpSn0NRDhUGQVy_4PW3PM9akPDRjBmjCWphVb-_rAiv-pEmm1VgeE9JZzpWVnaZ3rNK6Cw"
+        "witness_signature": "ap4ETAScoup7gU05BwDENd1aZAxkU6uQ7YmezDwZO917e9HbkQYxQY1KkmmFGqWzXnlEeG4-vBIVaYk9liXUCA"
       }
     ]
   },
@@ -355,22 +355,22 @@
     "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
     "network": "bitcoin-mainnet",
     "sequence": 2,
-    "previous_claim_id": "fysc2:1210a029e8087c1c6ba142979cd168046888627f80d90aae9fab90039d9c8e07",
+    "previous_claim_id": "fysc2:a3854d69cc661226d0ec03420f6d0e892a2be098f7609e027231592ba199d8ae",
     "period_start": "2027-01-12T00:00:00Z",
     "period_end": "2027-01-13T00:00:00Z",
-    "declaration_id": "fyrd2:b3726eaff6ef7f6df69312da2fa34e38b38e8750f92f20411a51098e119cab45",
+    "declaration_id": "fyrd2:16cadc2610d20c84575d03a409c29beee0acf70fb6e963800814340d3acb17d1",
     "succession_id": null,
     "receipt_count": 1,
     "total_base_units": "136",
     "cumulative_base_units": "10608",
     "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
-    "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
-    "provider_signature": "Gmumh4B_MVvTXcmPJsxWw2LIBaRbzBY1SxFd7jjOXCeB8CA7iQZEjYpyoBoDnq1OqxQIGr2ioqnecd9QNZUBAw"
+    "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
+    "provider_signature": "-vLQw82y6Hh5xObvdHmCbXP6Bb3NQa--shxHXboNjnx4yZMxfW2nFr38CHTE_fa7LRLzxYeCqVwyRZ3DyR0BAA"
   },
   "second_claim_witnesses": [
     {
       "witness_id": "did:key:z6MkrPuMzSSYYddw1BKtyrH5mMJzQmUX42Lr8eiKpsPVb3C1",
-      "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
+      "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "network": "bitcoin-mainnet",
       "sequence": 2,
@@ -380,11 +380,11 @@
       "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
       "credit_base_units": "9989392",
       "witnessed_at": "2027-01-13T12:00:00Z",
-      "witness_signature": "TyJkWyYffv9X6Pm0o_WAM8VUeZXugMnI9JJrMYEg9Ax_OzaFximxmUAwjYZwTtBDkQtjVYtrwku5KYksmNeHCA"
+      "witness_signature": "vcBkyteXp0nmgN4RrB32yyF0aVdePVGHLybOQkiyk0iuZlbhnr4ld5Dv1XD7-nJlnvaipPT670_EkGSXXYGSCg"
     },
     {
       "witness_id": "did:key:z6Mkin4R28N2tfcsvUfuX52peTmvPGz99aA4585EtYvALN5W",
-      "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
+      "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "network": "bitcoin-mainnet",
       "sequence": 2,
@@ -394,11 +394,11 @@
       "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
       "credit_base_units": "9989392",
       "witnessed_at": "2027-01-13T12:00:00Z",
-      "witness_signature": "j350MobdHAGxXze9jRAvbw7AfAmVXFivoKKwDJmQ6sXbo5gmu0Ndox771-4DlGfnMIne2RBsKGTtto3zRVf5Aw"
+      "witness_signature": "27YGWAfFmNTQn59SYNW4zxzHFefAPSX_EwsedUqRQSJDv_DG_f8cx4d3BpZIzTrdtLzb5m81SpfH_zEg5WVvBw"
     },
     {
       "witness_id": "did:key:z6Mkjsv23KiDw67aC9qfNVUcNwM19nj8GZPvEMMEBuv3ZpT3",
-      "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
+      "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "network": "bitcoin-mainnet",
       "sequence": 2,
@@ -408,11 +408,11 @@
       "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
       "credit_base_units": "9989392",
       "witnessed_at": "2027-01-13T12:00:00Z",
-      "witness_signature": "h8RAdHtFNq-Ol0LQ124A_e8gCGLGYb4rc3Xr_-zftDCNb79k9f9h_KGW9Fi_XxyCP2xlj9wtFievYurAN9yiBg"
+      "witness_signature": "fs9I_kzqSZJRnA9SBi7Y1cbt0X1CrxeSeKVJk8NUBl4Ne-MHgf7qkO17DggIybhgMRPkBKBodmCTkWn0kv8ICA"
     },
     {
       "witness_id": "did:key:z6MkksB6V1wxz1SWEgct2qdqVSk6a7E24fuifo62BgYFsEc6",
-      "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
+      "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "network": "bitcoin-mainnet",
       "sequence": 2,
@@ -422,11 +422,11 @@
       "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
       "credit_base_units": "9989392",
       "witnessed_at": "2027-01-13T12:00:00Z",
-      "witness_signature": "MUzL4CFwgnIbZdtHs9jGbj6Yrx2V7gsz4_n0KC7bwsDMehmfmqvNurtCcqfS1ua6xaUdp5Rvyqaszt_BfPskCw"
+      "witness_signature": "q6fbpT-9pTv1WCsc3o01UQ1vWxs-3hAVTkq3aE4alGVvrVf88F6u-wVa7nHw2uyFo6lkrZ4AIpwx1L1iFMlRDQ"
     },
     {
       "witness_id": "did:key:z6MknRVAmZWhgiDdFgGcm6Q1npBZtsdA3Y5zU3p3fc1Ez4wo",
-      "claim_id": "fysc2:b5a4ea9d0f217d3cce95703293136e5a7f25f09eaa835d90d344e5bda3b17489",
+      "claim_id": "fysc2:8ba27d6ac595f657c428b78c6ae8a4ef7920edddb710aa5f939133107e9f5cf4",
       "provider_id": "did:key:z6MkhFwXNFWosLeugvSf4wcL9t3uuRXueGSFTRgSvHhWj5G2",
       "network": "bitcoin-mainnet",
       "sequence": 2,
@@ -436,18 +436,18 @@
       "receipts_root": "7f0b4118e1530800d11e80d9d412108ee17789bde19676fb134a856603a6cbd8",
       "credit_base_units": "9989392",
       "witnessed_at": "2027-01-13T12:00:00Z",
-      "witness_signature": "uS1xYoNpKQcCaBELX8XY4jOu7VE5g21Qd4OxTWwleY5zmGqPjJvp3vhdirXul60N_tNpVlp118SAM6MnQ-91Cg"
+      "witness_signature": "aPW5dPCGFzIi0o1ND6ISlBEfMGDnCX0oWoIvbZhPgBcfeptOxEtrWmvntTIj7c12Fpa7HDPSQ-nxnW0qqFM1Cw"
     }
   ],
   "settlement_refusal_example": {
     "witness_id": "did:key:z6MkrPuMzSSYYddw1BKtyrH5mMJzQmUX42Lr8eiKpsPVb3C1",
-    "claim_id": "fysc2:e93e36590031d27387594cd28e3679cdd03701c316477447e4a6701bfe9ac1ca",
+    "claim_id": "fysc2:dd758891f1f325147a1ad219c7f5366184ab89208db6b4ecb1a113f9a695850e",
     "provider_id": "did:key:z6MkuPRZNRtUkrhBZ1L119iGW2rmWNhPiqovUGDfhSzBDC1D",
     "network": "bitcoin-mainnet",
     "sequence": 1,
     "reason": "bad_period",
     "refused_at": "2027-01-13T00:00:00Z",
-    "witness_signature": "9BFeo6TxjqNnOvUohuKA9YW-_cSwW0RC1Ln_LASaQ9kk2qOOx91Qa_wd5sqBiYiwzLWtLw_kRmSvta7JgrdKAA"
+    "witness_signature": "sZ1nN1Z3_newW8q8GgfiH67XH-ThOVi0B4ECpsij88N3xiotU7heqxpR0QglFpt7FAamDbHzzz5wvjUc6NV2Ag"
   },
   "foundation_log_head": {
     "foundation_id": "did:key:z6MktFovzcapNZyZBWzFJpCXf26B8XLKdXtwfwnXXFebPgzM",

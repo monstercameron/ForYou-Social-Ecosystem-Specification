@@ -97,7 +97,7 @@ def score(report):
     a, r = report['availability_attempts'], report['retrieval_attempts']
     if report['sample_coverage'] != 'complete' or min(a, r) < 20:
         return None
-    return ((10000 * report['availability_successes'] // a) + (10000 * report['retrieval_passes'] // r)) // 2
+    return min(10000 * report['availability_successes'] // a, 10000 * report['retrieval_passes'] // r)
 
 
 class QualityTests(unittest.TestCase):
@@ -143,6 +143,8 @@ class QualityTests(unittest.TestCase):
         for coverage in ('incomplete', 'unknown'):
             self.assertIsNone(score(dict(report, sample_coverage=coverage)))
         self.assertIsNone(score(dict(report, retrieval_attempts=19)))
+        # score = min(A, R), not the average: full availability cannot hide failing retrieval.
+        self.assertEqual(score(dict(report, availability_successes=20, retrieval_passes=10)), 5000)
         self.assertTrue(0 <= score(report) <= 10000)
         # Complete is a signed assertion about the plan, not independently proven coverage.
         self.assertEqual(report['sample_coverage'], 'complete')
