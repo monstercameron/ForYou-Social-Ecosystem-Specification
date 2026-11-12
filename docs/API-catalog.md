@@ -36,7 +36,7 @@ Listings and advisory indexes use the bounded `DiscoveryPage` and the date/from/
 | `POST /v1/deposits` | Root-authenticated request for a provider-signed deposit invoice. | [Funding](./02-protocol.md#funding-the-provider-local-balance) |
 | `POST /v1/deposits/observe` | Root-authenticated transfer hint; 202 while pending, or the signed credit. | [Funding](./02-protocol.md#funding-the-provider-local-balance) |
 | `GET /v1/balances/{network}` | Root-authenticated signed balance status; not a solvency proof. | [Funding](./02-protocol.md#funding-the-provider-local-balance) |
-| `GET /v1/account-history/{network}` | Root-authenticated signed history of the account's credits, debits, restores and withdrawals. | [Funding](./02-protocol.md#funding-the-provider-local-balance) |
+| `GET /v1/account-history/{network}/{after}` | Root-authenticated signed history of the account's credits, debits, restores and withdrawals. | [Funding](./02-protocol.md#funding-the-provider-local-balance) |
 | `POST /v1/withdrawals` | Root-authenticated withdrawal of unused balance; returns a signed `WithdrawalStatus`. | [Funding](./03-economics.md#funding-a-provider-local-balance) |
 | `GET /v1/admissions/{message_id}` | Root-authenticated lookup of a committed receipt. | [Quote and debit](./03-economics.md#quote-and-debit) |
 | `POST /v1/settlement-witnesses` | A monitor delivers a self-authenticating `SettlementWitness`. | [Settlement committee](./03-economics.md#the-settlement-committee) |

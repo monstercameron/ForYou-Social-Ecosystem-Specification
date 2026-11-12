@@ -120,7 +120,7 @@ Before accepting a deposit, a provider MUST disclose all of the following:
 
 - A provider MUST NOT describe the protocol fee, the schedule or any asset conversion as terms it sets, and MUST NOT charge a different protocol fee than the schedule amount.
 - A provider MUST NOT present an unconfirmed or orphaned deposit as spendable.
-- A provider MUST keep each account's deposit, debit and withdrawal history available to the authenticated author for as long as the account has a balance or an open claim. It serves that history, signed, at `GET /v1/account-history/{network}`, defined with [funding](./02-protocol.md#funding-the-provider-local-balance).
+- A provider MUST keep each account's deposit, debit and withdrawal history available to the authenticated author for as long as the account has a balance or an open claim. It serves that history, signed, at `GET /v1/account-history/{network}/{after}`, defined with [funding](./02-protocol.md#funding-the-provider-local-balance).
 - A provider MUST NOT treat an unmatched, excess or late transfer as forfeited without the claims process below.
 - Control of an author root key proves control of the protocol identity. It does not prove ownership of funds sent by someone else; a third-party payer uses the claims channel.
 - A provider MUST NOT place DIDs, account identifiers or dispute details in on-chain transaction data.

@@ -126,7 +126,7 @@ def history_page(entries, more=False):
 
 
 def check_history(page, after):
-    """What an author's client checks on one GET /v1/account-history/{network} response."""
+    """What an author's client checks on one GET /v1/account-history/{network}/{after} response."""
     structural('AccountHistoryPage', page)
     em.verify(page['provider_id'], 'account-history', em.without(page, 'provider_signature'), page['provider_signature'])
     if [e['sequence'] for e in page['entries']] != list(range(after + 1, after + 1 + len(page['entries']))):
@@ -170,7 +170,7 @@ class AccountHistoryTests(unittest.TestCase):
 
 class CatalogTests(unittest.TestCase):
     def test_monitor_evidence_routes_are_listed(self):
-        for route in ('`GET /v1/quality-reports/{report_id}/methodology`', '`GET /v1/quality-reports/{report_id}/observations`', '`GET /v1/foundation-evidence`', '`GET /v1/account-history/{network}`'):
+        for route in ('`GET /v1/quality-reports/{report_id}/methodology`', '`GET /v1/quality-reports/{report_id}/observations`', '`GET /v1/foundation-evidence`', '`GET /v1/account-history/{network}/{after}`'):
             self.assertIn(route, CATALOG)
 
 

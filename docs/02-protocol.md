@@ -184,15 +184,15 @@ Invoice limits and durability:
 
 - Its available, frozen and reserved amounts are disjoint author-scoped accounting categories, not recipient claims or proof of solvency.
 
-| `GET /v1/account-history/{network}` | Rule |
+| `GET /v1/account-history/{network}/{after}` | Rule |
 | --- | --- |
 | Authentication | Fresh root service-auth |
-| Path and query | network as for balances; optional `after`, the last `sequence` the caller holds (0 or absent for the start) |
+| Path | network as for balances; `after` is the last `sequence` the caller holds as a canonical decimal, 0 for the start. It is part of the path because an authenticated resource carries no query |
 | Result | AccountHistoryPage `{provider_id,author_id,network,entries,more,provider_signature}` signed under P("account-history", excluding provider_signature) |
 
 - An entry is `{sequence,at,kind,amount_base_units,reference}`. `sequence` starts at 1 and increases by exactly one for each entry of that author and network. A page holds the entries after `after` in order, at most 100; `more` is true when later entries exist.
-- `kind` and `reference` are: `deposit_credit` with the `credit_id`; `deposit_reversal` with the `credit_id` of a credit that a chain reorganization removed; `debit` with the `receipt_id` of the admission that was charged; `fee_restore` with the `receipt_id` whose fee was restored; `withdrawal` with the withdrawal `request_id`; `withdrawal_return` with the `request_id` of a withdrawal that failed and went back to the balance.
-- `amount_base_units` is the positive amount of the entry. Credits, restores and returns add to the balance; debits, reversals and withdrawals subtract from it. The entries from sequence 1 therefore reproduce the account's total of available, frozen and reserved amounts.
+- `kind` and `reference` are: `deposit_credit` with the `credit_id`, or with the transfer identity when the credit came from a funding claim settled for the author; `deposit_reversal` with the `credit_id` of a credit that a chain reorganization removed; `debit` with the `receipt_id` of the admission that was charged; `fee_restore` with the `receipt_id` whose fee was restored; `withdrawal` with the withdrawal `request_id`; `withdrawal_return` with the `request_id` of a withdrawal that failed and went back to the balance.
+- `amount_base_units` is the positive amount of the entry. Credits, restores and returns add to the balance; debits, reversals and withdrawals subtract from it. A withdrawal is entered when it is requested, so the entries from sequence 1 sum to the account's available plus frozen amounts, and an amount reserved for a withdrawal in progress has already been subtracted.
 - This is the history that [compliance](./04-compliance.md#custody-and-balance-disclosure) requires a provider to keep available to the author. It is the provider's own signed account of what it did, not proof of solvency.
 
 For both `POST /v1/deposits/observe` and `GET /v1/balances/{network}`: authenticated exact retries recover original durable results without another credit; use 429/503 for bounded overload and the nonrevealing rights channel for inaccessible records.
