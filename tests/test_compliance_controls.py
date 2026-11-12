@@ -45,7 +45,11 @@ def checkpoint(events, operator='provider-a', generation=1):
 
 
 def recover(events, trusted_checkpoint, operator='provider-a', generation=1):
-    if trusted_checkpoint is None or checkpoint(events, operator, generation) != trusted_checkpoint:
+    # Records up to the checkpoint must reproduce it. Records after it were committed
+    # but never acknowledged; they are applied in order, not treated as missing history.
+    if trusted_checkpoint is None or len(events) < trusted_checkpoint['sequence']:
+        raise Denied('recovery unavailable')
+    if checkpoint(events[:trusted_checkpoint['sequence']], operator, generation) != trusted_checkpoint:
         raise Denied('recovery unavailable')
     deleted, restricted, revoked = set(), set(), set()
     for action, scope, identifier in events:
@@ -127,10 +131,19 @@ class ComplianceControlsTests(unittest.TestCase):
                 (list(reversed(events)), trusted, 'provider-a', 1),
                 (events, trusted, 'provider-b', 1),
                 (events, trusted, 'provider-a', 2),
-                (events + [('delete', 'alice', 'post-2')], trusted, 'provider-a', 1)]:
+                (events[:1], trusted, 'provider-a', 1),
+                ([('restrict', 'alice', 'post-9')] + events[1:], trusted, 'provider-a', 1)]:
             with self.subTest(events=bad_events, operator=operator, generation=generation):
                 with self.assertRaises(Denied):
                     recover(bad_events, bad_checkpoint, operator, generation)
+
+    def test_records_committed_after_the_checkpoint_are_applied_in_order(self):
+        acknowledged = [('restrict', 'alice', 'post-1')]
+        trusted = checkpoint(acknowledged)
+        tail = [('delete', 'alice', 'post-2'), ('lift', 'alice', 'post-1')]
+        deleted, restricted, _ = recover(acknowledged + tail, trusted)
+        self.assertIn(('alice', 'post-2'), deleted)
+        self.assertNotIn(('alice', 'post-1'), restricted)
 
     def test_restriction_lift_cannot_erase_deletion_or_delegate_revocation(self):
         events = [('delete', 'alice', 'post-1'), ('restrict', 'alice', 'post-1'),
