@@ -98,6 +98,12 @@ The Foundation keeps an append-only log of every object it signs: vault receipts
 - At least once every 24 hours in which the log grew, the Foundation signs a `FoundationLogHead` `{foundation_id,size,root,signed_at,foundation_signature}` under P("foundation-log-head", the head excluding `foundation_signature`). Heads are served with the log. Two valid heads from one key where the smaller log is not a prefix of the larger are proof that the log was rewritten.
 - The log is served at `GET /v1/foundation/log`, its heads at `GET /v1/foundation/log/heads` and inclusion proofs at `GET /v1/foundation/log/proof/{object_hash}?size={n}`, as listed in [economics](./03-economics.md#foundation-publications). A proof is the RFC 6962 audit path for the entry in a tree of `size` leaves.
 - Monitors named in the distribution policy MUST mirror the log, keep every signed head and report any inconsistency.
+- A monitor reports by publishing `FoundationEvidence` at `GET /v1/foundation-evidence`, a `FoundationEvidencePage` `{evidence}` in the order the monitor observed it. An evidence object is `{monitor_id,kind,heads,closure,transfer,observed_at,monitor_signature}`, signed under P("foundation-evidence", the object excluding `monitor_signature`). `kind` is one of:
+  - `log_rewrite`: `heads` holds two valid heads from one key where the smaller log is not a prefix of the larger;
+  - `head_after_closure`: `heads` holds one head with a greater `size` than the head in `closure`, which the monitor received before the closure was published;
+  - `recipient_funded_deposit`: `transfer` is `{network,transaction,recipient}`, naming a provider settlement deposit that was funded from the Foundation recipient address `recipient`.
+
+  Members a kind does not use are an empty `heads` array and null `closure` or `transfer`. The embedded heads and closure verify on their own, and anyone can check the transfer on the chain. The monitor's signature only attributes the report; it adds no weight to the evidence.
 
 ### Genesis manifest
 
@@ -199,7 +205,7 @@ A verifier MUST NOT retry a failed signature under another algorithm and MUST NO
 
 - Any party MAY publish a signed quality report. A signature identifies the reporting key; it does not establish independence or accuracy.
 - A report affects fee distribution only when its monitor is named in the signed `DistributionPolicy`, and only as defined in [distribution](./03-economics.md#distribution). No report triggers any other payment, global trust decision or mandatory ranking.
-- The Foundation MUST publish, with each `DistributionPolicy`, the named monitors, their selection criteria and any funding or ownership relationship between a monitor and the Foundation or a provider.
+- The Foundation MUST publish, with each `DistributionPolicy`, the named monitors, their selection criteria and any funding or ownership relationship between a monitor and the Foundation or a provider. It does so in the `disclosures` array of `GET /v1/foundation/distribution`: one `MonitorDisclosure` `{policy_id,monitor_id,selection_criteria,relationships}` for every monitor of every policy the page lists. `selection_criteria` is UTF-8 text of at most 4,096 bytes. `relationships` lists each relationship as `{party,kind,description}`, where `party` is `foundation` or a provider's `did:key`, `kind` is `funding` or `ownership`, and `description` is at most 1,024 bytes. An empty array is the Foundation's statement that there is none. A disclosure is a statement by the Foundation, not by the release keys: it is unsigned and proves only that the Foundation published it. A client that shows the committee SHOULD show it.
 - A default provider or monitor list MUST identify who controls it, its criteria and its update policy. Clients MUST let the user inspect, replace or disable defaults.
 
 ## License

@@ -72,6 +72,9 @@ Served by each committee monitor.
 | `GET /v1/witnesses` | The settlement witnesses, refusals and holds the monitor has signed, with the signed claims they refer to, by provider, network and sequence. | [Settlement committee](./03-economics.md#the-settlement-committee) |
 | `GET /v1/equivocations` | Equivocation proofs the monitor holds for a provider. | [Settlement committee](./03-economics.md#the-settlement-committee) |
 | `GET /v1/quality-reports` | The monitor's own quality reports for a provider and quarter. | [Distribution](./03-economics.md#distribution) |
+| `GET /v1/quality-reports/{report_id}/methodology` | The exact methodology text of one report; its SHA256 is the report's `methodology_digest`. | [Distribution](./03-economics.md#distribution) |
+| `GET /v1/quality-reports/{report_id}/observations` | The exact `QualityObservationSet` of one report; its SHA256 is the report's `observations_digest`. | [Distribution](./03-economics.md#distribution) |
+| `GET /v1/foundation-evidence` | `FoundationEvidence` the monitor holds about the Foundation's log, closures and deposits. | [Foundation log](./06-governance.md#foundation-log) |
 
 ## Optional owner export
 

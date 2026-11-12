@@ -36,7 +36,7 @@ A monitor MUST NOT sign for a provider key it does not control or imply its own 
 
 Period timestamps use the protocol's canonical UTC format and satisfy `period_start < period_end <= created_at`. The maximum period is 31 days. A report describes exactly one provider and period.
 
-Monitors publish the exact methodology and raw observations alongside the report whenever lawful. Their SHA256 digests bind the exact bytes. The methodology is non-executable UTF-8 text, at most 1 MiB. It identifies:
+Monitors publish the exact methodology and raw observations alongside the report whenever lawful. Their SHA256 digests bind the exact bytes. A committee monitor serves both at the routes defined in [distribution](./03-economics.md#distribution), and a report whose evidence is not served there does not count toward fee distribution. The methodology is non-executable UTF-8 text, at most 1 MiB. It identifies:
 
 - the endpoint and pinned provider key;
 - the probe rate and observation locations. The exact probe times are committed by digest in advance and revealed with the observations, so a provider cannot serve well only when probed;
