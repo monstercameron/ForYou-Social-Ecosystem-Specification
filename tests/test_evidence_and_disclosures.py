@@ -1,4 +1,4 @@
-"""Monitor evidence about the Foundation, quality evidence routes and monitor disclosures; a model, not a server."""
+"""Monitor evidence about the Foundation, quality evidence routes, monitor disclosures and account history; a model, not a server."""
 import unittest
 
 import jsonschema
@@ -119,9 +119,58 @@ class MonitorDisclosureTests(unittest.TestCase):
             structural('DistributionPage', {'policies': [], 'statements': []})
 
 
+def history_page(entries, more=False):
+    p = {'provider_id': did(PROVIDER), 'author_id': did(em.MONITORS[1]), 'network': 'bitcoin-mainnet', 'entries': entries, 'more': more}
+    p['provider_signature'] = em.sign(PROVIDER, 'account-history', p)
+    return p
+
+
+def check_history(page, after):
+    """What an author's client checks on one GET /v1/account-history/{network} response."""
+    structural('AccountHistoryPage', page)
+    em.verify(page['provider_id'], 'account-history', em.without(page, 'provider_signature'), page['provider_signature'])
+    if [e['sequence'] for e in page['entries']] != list(range(after + 1, after + 1 + len(page['entries']))):
+        raise ValueError('sequence gap')
+    adds = {'deposit_credit', 'fee_restore', 'withdrawal_return'}
+    return sum(int(e['amount_base_units']) * (1 if e['kind'] in adds else -1) for e in page['entries'])
+
+
+class AccountHistoryTests(unittest.TestCase):
+    def entries(self):
+        return [
+            {'sequence': 1, 'at': '2027-01-10T00:00:00Z', 'kind': 'deposit_credit', 'amount_base_units': '10000000', 'reference': 'fydc2:' + 'ab' * 32},
+            {'sequence': 2, 'at': '2027-01-10T00:05:00Z', 'kind': 'debit', 'amount_base_units': '136', 'reference': 'fyr2:' + 'cd' * 32},
+            {'sequence': 3, 'at': '2027-01-11T00:00:00Z', 'kind': 'fee_restore', 'amount_base_units': '136', 'reference': 'fyr2:' + 'cd' * 32},
+            {'sequence': 4, 'at': '2027-01-12T00:00:00Z', 'kind': 'withdrawal', 'amount_base_units': '4000000', 'reference': 'A' * 43},
+        ]
+
+    def test_entries_reproduce_the_balance(self):
+        self.assertEqual(check_history(history_page(self.entries()), 0), 6000000)
+
+    def test_a_later_page_continues_the_sequence(self):
+        self.assertEqual(check_history(history_page(self.entries()[2:]), 2), -3999864)
+
+    def test_a_missing_entry_is_detected(self):
+        with self.assertRaises(ValueError):
+            check_history(history_page([self.entries()[0], self.entries()[2]]), 0)
+
+    def test_a_changed_page_fails_its_signature(self):
+        page = dict(history_page(self.entries()), more=True)
+        with self.assertRaises(ValueError):
+            check_history(page, 0)
+
+    def test_closed_shape(self):
+        first = self.entries()[0]
+        for bad in (dict(first, kind='bonus'), dict(first, amount_base_units='0'), dict(first, sequence=0), dict(first, note='x'), dict(first, reference='')):
+            with self.assertRaises(jsonschema.ValidationError):
+                structural('AccountHistoryEntry', bad)
+        with self.assertRaises(jsonschema.ValidationError):
+            structural('AccountHistoryPage', history_page([dict(first, sequence=n + 1) for n in range(101)]))
+
+
 class CatalogTests(unittest.TestCase):
     def test_monitor_evidence_routes_are_listed(self):
-        for route in ('`GET /v1/quality-reports/{report_id}/methodology`', '`GET /v1/quality-reports/{report_id}/observations`', '`GET /v1/foundation-evidence`'):
+        for route in ('`GET /v1/quality-reports/{report_id}/methodology`', '`GET /v1/quality-reports/{report_id}/observations`', '`GET /v1/foundation-evidence`', '`GET /v1/account-history/{network}`'):
             self.assertIn(route, CATALOG)
 
 

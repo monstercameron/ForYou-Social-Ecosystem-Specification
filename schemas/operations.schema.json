@@ -3720,6 +3720,86 @@
           }
         }
       }
+    },
+    "AccountHistoryEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sequence",
+        "at",
+        "kind",
+        "amount_base_units",
+        "reference"
+      ],
+      "properties": {
+        "sequence": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 9007199254740991
+        },
+        "at": {
+          "$ref": "#/$defs/FinancialTime"
+        },
+        "kind": {
+          "enum": [
+            "deposit_credit",
+            "deposit_reversal",
+            "debit",
+            "fee_restore",
+            "withdrawal",
+            "withdrawal_return"
+          ]
+        },
+        "amount_base_units": {
+          "$ref": "#/$defs/FinancialPositiveAmount"
+        },
+        "reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "pattern": "^[\\x21-\\x7e]+$"
+        }
+      }
+    },
+    "AccountHistoryPage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider_id",
+        "author_id",
+        "network",
+        "entries",
+        "more",
+        "provider_signature"
+      ],
+      "properties": {
+        "provider_id": {
+          "$ref": "#/$defs/FinancialDid"
+        },
+        "author_id": {
+          "$ref": "#/$defs/FinancialDid"
+        },
+        "network": {
+          "enum": [
+            "bitcoin-mainnet",
+            "ethereum-mainnet"
+          ]
+        },
+        "entries": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 100,
+          "items": {
+            "$ref": "#/$defs/AccountHistoryEntry"
+          }
+        },
+        "more": {
+          "type": "boolean"
+        },
+        "provider_signature": {
+          "$ref": "#/$defs/FinancialSignature"
+        }
+      }
     }
   }
 }
