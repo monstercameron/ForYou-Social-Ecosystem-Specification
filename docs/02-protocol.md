@@ -689,7 +689,7 @@ A provider that supports delegation MUST implement these routes. Each uses fresh
 - With already confirmed funding, admission uses provider wall-clock time and requires a message timestamp no more than 300 seconds old or 60 seconds in the future and a delegation valid at the atomic authorization_at/issued_at.
 - Initial deposit confirmation is a separate earlier operation; create a fresh intent after funds are available.
 - Clock uncertainty exceeding 60 seconds stops issuance.
-- Relays reject receipts more than 60 seconds in the future relative to local clock and do not require a live revocation lookup for historical receipts.
+- Relays reject receipts more than 60 seconds in the future relative to local clock and do not require a live revocation lookup for historical receipts. A client applies the same tolerance differently: a receipt more than 60 seconds ahead of the client's clock is not accepted yet and is checked again later, as [client verification](./07-clients.md#download-and-verify) defines. It is not classified `invalid` for that reason, because the client's own clock may be the one that is wrong.
 - A lost root key cannot be recovered by this protocol; see [key succession](#key-succession) for planned rotation.
 
 ## Key succession
@@ -716,7 +716,7 @@ Verification rules:
 - For a provider key, this time rule does not apply to submission receipts and settlement claims. A client MUST NOT reject a receipt because of it. A receipt is verified under the key that signed it, and it is paid when a settlement proof whose claim is signed by that same key settles. Which key signs a settlement claim is decided by the claim chain.
 - For a provider key, the first settlement claim signed by `new_id` names the succession by its `succession_id`, under the [claim rules](./03-economics.md#settlement). Committee monitors accept that claim only after they have verified the succession. They accept a provider succession under one rule:
   - an old key has successions to one new key only. Another succession for the same `old_id` and `new_id` with a different `effective_at` is allowed and is not a conflict, because the claim names the one it uses;
-  - `new_id` is not the old or new key of a succession from a different old key, and it has signed no settlement claim before the claim that names the succession;
+  - `new_id` is not the old or new key of a succession from a different old key, and no committee monitor has witnessed or followed a settlement claim signed by it other than as the continuation of this chain. A claim signed by the new key that monitors refused, including the naming claim while it waits for the succession to be verified, does not count;
   - a later succession from `new_id` to a third key is allowed.
 
   The new key continues the old key's claim chain, and settlement deposits keep carrying the provider's first key. Old receipts stay verifiable under `old_id`.

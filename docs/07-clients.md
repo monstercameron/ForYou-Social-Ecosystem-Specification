@@ -93,6 +93,8 @@ Public read routes need no account, payment or signature. A client MUST verify e
 
 The result is one of `invalid`, `cryptographically_valid_untrusted`, `cryptographically_valid_trusted_unaccepted` or `locally_admitted`, as defined in [portability](./05-portability.md#decentralized-operation-and-trust-boundaries). No signature proves that content is true.
 
+The steps use the client's own clock in one place only. A receipt whose `issued_at` is more than 60 seconds ahead of that clock is not evaluated yet: the client shows the record as not verified and evaluates it again once its clock has passed the receipt's `issued_at`. A client MUST NOT classify a record `invalid` on the evidence of its own clock alone, because that clock may be the one that is wrong.
+
 Settlement state:
 
 | State | Condition |

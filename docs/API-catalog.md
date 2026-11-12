@@ -121,7 +121,8 @@ The owning route contract takes precedence. Error bodies are the closed `PublicR
 | 401 | Missing, expired or invalid service-auth or provider signature: `unauthenticated`. |
 | 402 | `insufficient_balance` on admission or withdrawal. |
 | 403 | Disclosable restriction: `policy_restricted`, `legal_restricted` or `restricted`; or `delegation_revoked` on admission. Takes precedence over 410. |
-| 404 | Unknown or nondisclosable object: `not_found`. Not proof of global absence. |
+| 404 | Unknown or nondisclosable object, or a path that is not a route of this service: `not_found`. Not proof of global absence. |
+| 405 | A method the route does not define. The response has an `Allow` header naming the defined methods and an empty body; no status name is defined for it. |
 | 409 | State conflict: `id_collision`, `not_ready`, `export_invalidated`, `quote_conflict`, `stale_state`, `request_conflict`. `not_ready` means a precondition is not met yet: export bytes requested while the job is preparing, a vault delivery whose receipt is not yet settled, or a display name published by an author with no accepted public post at that holder. |
 | 410 | `retention_expired` for a post whose declared provider retention ended, or `export_expired` for an export job. The record may still be in the Lifetime Vault. |
 | 416 | `range_not_satisfiable`: an export chunk offset exceeds the authorized total. |
@@ -130,5 +131,7 @@ The owning route contract takes precedence. Error bodies are the closed `PublicR
 | 503 | Unavailable service, state or capacity: `unavailable`. Never a manufactured success. |
 
 The schema's status list also contains `too_large`. No route in release 1.0 returns it; it is reserved, and a server MUST NOT send it.
+
+Every error and status response carries `Cache-Control: no-store`, including the 404 for an unknown path and the 405 for an undefined method. A server MUST NOT answer either with a body that is not the `PublicReadError` object, apart from the empty 405 body.
 
 Public restriction bodies and disclosure limits are defined in [shared signals](./04-compliance.md#shared-signals-and-legal-restrictions). Rate limits MUST NOT silently alter filters or produce empty successful results.

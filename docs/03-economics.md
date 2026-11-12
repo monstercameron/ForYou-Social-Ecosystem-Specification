@@ -108,7 +108,7 @@ Settlement moves every collected fee to the Foundation and lets anyone check tha
 - Deposited credit is not refundable and has no expiry. It belongs to the chain, not to a key. After a provider [key succession](./02-protocol.md#key-succession), the new key signs the next claims of the same chain, and deposits keep carrying the first key's commitment.
 - Monitors accept a provider succession under one rule:
   - an old key has successions to one new key only. Another succession for the same old and new key with a different `effective_at` is allowed and is not a conflict, because the claim names the one it uses;
-  - the new key is not the old or new key of a succession from a different old key, and it has signed no settlement claim before the claim that names the succession;
+  - the new key is not the old or new key of a succession from a different old key, and no committee monitor has witnessed or followed a settlement claim signed by it other than as the continuation of this chain. A claim signed by the new key that monitors refused, including the naming claim while it waits for the succession to be verified, does not count;
   - a later succession from the new key to a third key is allowed.
 
   Deposits carrying the new key's own commitment are never counted for this chain. Nothing a third party sends can therefore affect a succession, and no deposit is counted for two chains.

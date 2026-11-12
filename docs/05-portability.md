@@ -91,6 +91,9 @@ A conformant provider MUST configure at least the following anonymous capacity. 
 | --- | --- | --- |
 | Direct `GET /v1/messages/{message_id}` | 600 per minute | 30 per minute |
 | Listing requests | 60 per minute | 6 per minute |
+| Settlement reads | 600 per minute | 60 per minute |
+
+Settlement reads are `/v1/settlements/{receipt_id}`, `/v1/settlement-claims` with its leaves and witnesses routes, and `/v1/retention`. They have their own class because the settlement committee depends on them: each committee monitor reads a provider's claim chain and leaves every period, and several monitors may share one network address. A provider MUST NOT count settlement reads against the listing class.
 
 These are minimum configured capacities, not guarantees under distributed attack, legal restriction, outage or resource exhaustion. Providers MUST:
 
